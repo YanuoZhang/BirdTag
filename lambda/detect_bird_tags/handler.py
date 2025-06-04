@@ -46,14 +46,14 @@ def run_video_detection(video_path, save_path, confidence=0.4):
         model = model_utils.get_model()
         class_dict = model.names
 
-        labels = model_utils.process_video(
+        tag_counts = model_utils.process_video(
             model=model,
             video_path=video_path,
             save_path=save_path,
             class_dict=class_dict,
             confidence=confidence
         )
-        tag_counts = dict(Counter(labels))
+
         print(f"[INFO] Video tags detected: {tag_counts}")
 
         return {
