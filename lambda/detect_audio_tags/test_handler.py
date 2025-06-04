@@ -2,7 +2,8 @@ import base64
 import json
 from handler import lambda_handler
 
-# Step 1: Read and encode your local audio file
+# Step 1: Read and encode your local audio file\
+print("test start")
 with open("soundscape.wav", "rb") as f:
     audio_data = f.read()
     audio_base64 = base64.b64encode(audio_data).decode("utf-8")

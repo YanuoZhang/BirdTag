@@ -1,18 +1,31 @@
+# Stage 1: Build libsndfile and all dependencies
+FROM amazonlinux:2 AS builder
 
-FROM python:3.10-slim
-
-RUN apt-get update && apt-get install -y \
+RUN yum install -y \
     ffmpeg \
-    libsndfile1 \
-    git \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    gcc \
+    make \
+    libsndfile \
+    libsndfile-devel \
+    libvorbis \
+    libvorbis-devel \
+    flac \
+    gsm \
+    tar gzip
 
-WORKDIR /app
+# Stage 2: Lambda base image
+FROM public.ecr.aws/lambda/python:3.10
 
-COPY . /app
+COPY --from=builder /usr/lib64/libsndfile.so* /usr/lib64/
+COPY --from=builder /usr/lib64/libFLAC.so* /usr/lib64/
+COPY --from=builder /usr/lib64/libgsm.so* /usr/lib64/
+COPY --from=builder /usr/lib64/libvorbis.so* /usr/lib64/
+COPY --from=builder /usr/lib64/libvorbisenc.so* /usr/lib64/
+COPY --from=builder /usr/lib64/libogg.so* /usr/lib64/
 
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements-dev.txt
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python", "test_handler.py"]
+COPY . .
+
+CMD ["handler.lambda_handler"]

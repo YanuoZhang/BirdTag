@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy BirdTag audio tagging Lambda with ECR and S3 trigger
+
+Parameters:
+  LambdaImageUri:
+    Type: String
+    Description: ECR image URI (e.g., 123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-audio-lambda:latest)
+
+Resources:
+
+  ## 1. S3 Bucket for uploading audio
+  BirdTagAudioBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "birdtag-audio-files-${AWS::AccountId}"
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt BirdTagAudioLambda.Arn
+
+
+  ## 2. IAM Role for Lambda execution
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: birdtag-audio-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess  
+        
+
+  ## 3. Lambda function deployed from ECR
+  BirdTagAudioLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: birdtag-audio-lambda
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ImageUri: !Ref LambdaImageUri
+      PackageType: Image
+      Timeout: 300
+      MemorySize: 1024
+      Environment:
+        Variables:
+          TEMP_DIR: "/tmp"
+          # TABLE_NAME: "BirdTagMedia"
+
+  ## 4. Allow S3 to invoke Lambda
+  S3InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BirdTagAudioLambda
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub "arn:aws:s3:::birdtag-audio-files-${AWS::AccountId}"
+
+
+  # BirdTagMediaTable:
+  #   Type: AWS::DynamoDB::Table
+  #   Properties:
+  #     TableName: BirdTagMedia
+  #     AttributeDefinitions:
+  #       - AttributeName: media_id
+  #         AttributeType: S
+  #     KeySchema:
+  #       - AttributeName: media_id
+  #         KeyType: HASH
+  #     BillingMode: PAYPERREQUEST
+
+Outputs:
+  LambdaFunctionName:
+    Description: Name of the created Lambda function
+    Value: !Ref BirdTagAudioLambda
+
+  AudioUploadBucket:
+    Description: Name of the S3 bucket to upload audio
+    Value: !Ref BirdTagAudioBucket
+
