@@ -1,0 +1,11 @@
+# For S3 access and other AWS services
+boto3
+
+# BirdNET-Analyzer dependencies
+tflite-runtime==2.5.0       # TensorFlow Lite runtime for model inference
+numpy                       # Numerical computing
+scipy                       # Scientific computing
+librosa                     # Audio processing
+resampy                     # Audio resampling
+scikit-learn==1.6.1         # May be used in species classification utilities
+tqdm                        # Progress bar for analysis display (optional)
