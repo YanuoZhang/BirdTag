@@ -4,6 +4,7 @@ from ultralytics import YOLO
 import supervision as sv
 import cv2
 import os
+from collections import defaultdict
 
 # Global model cache
 MODEL = None
@@ -55,7 +56,8 @@ def process_video(model, video_path, save_path, class_dict, confidence=0.4):
         out = cv2.VideoWriter(save_path, fourcc, fps, (width, height))
 
         tracker = sv.ByteTrack(frame_rate=fps)
-        unique_tag_map = {}
+        seen_track_ids = set()
+        tag_counter = defaultdict(int)
 
         for _ in range(frame_count):
             ret, frame = cap.read()
@@ -67,9 +69,11 @@ def process_video(model, video_path, save_path, class_dict, confidence=0.4):
             detections = tracker.update_with_detections(detections)
 
             labels = [class_dict[int(cls)] for cls in detections.class_id]
+
             for track_id, label in zip(detections.tracker_id, labels):
-                if track_id is not None:
-                    unique_tag_map[track_id] = label
+                if track_id is not None and track_id not in seen_track_ids:
+                    seen_track_ids.add(track_id)
+                    tag_counter[label] += 1
 
             annotated = annotate_image(frame, detections, class_dict, confidence)
             out.write(annotated)
@@ -77,7 +81,7 @@ def process_video(model, video_path, save_path, class_dict, confidence=0.4):
         cap.release()
         out.release()
 
-        return list(dict.fromkeys(unique_tag_map.values()))  # preserve order, remove duplicates
+        return dict(tag_counter)
 
     except Exception as e:
         print(f"[ERROR] Failed to process video: {e}")

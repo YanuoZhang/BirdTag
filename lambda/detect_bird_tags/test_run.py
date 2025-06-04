@@ -8,7 +8,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 def test_image():
     print("\n=== Running Image Detection ===")
 
-    input_path = os.path.join(BASE_DIR, "test_images", "crows_1.jpg")
+    input_path = os.path.join(BASE_DIR, "test_images", "owl_2.jpg")
     output_path = os.path.join(BASE_DIR, "..", "..", "test_output", "annotated_crows_1.jpg")
 
     result = run_image_detection(image_path=input_path, save_path=output_path)
