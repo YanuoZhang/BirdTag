@@ -13,7 +13,7 @@ lambda/*/venv/
 lambda/*/.venv/
 lambda/*/env/
 lambda/*/.env/
-
+lambda/*/__pycache__/
 # Jupyter / Notebook / Test logs
 .ipynb_checkpoints/
 *.log
