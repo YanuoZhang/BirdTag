@@ -1,0 +1,72 @@
+# model_utils.py
+
+from ultralytics import YOLO
+import supervision as sv
+import cv2 as cv2
+import os
+
+def load_model():
+    base_dir = os.path.dirname(__file__)
+    model_path = os.path.join(base_dir, "model.pt")  
+    return YOLO(model_path)
+
+def annotate_image(img, detections, class_dict, confidence=0.4):
+    h, w = img.shape[:2]
+    thickness = sv.calculate_optimal_line_thickness((w, h))
+    text_scale = sv.calculate_optimal_text_scale((w, h))
+    palette = sv.ColorPalette.from_matplotlib('magma', 10)
+
+    detections = detections[detections.confidence > confidence]
+
+    labels = [f"{class_dict[cls]} {conf*100:.2f}%" for cls, conf in zip(detections.class_id, detections.confidence)]
+
+    box_annotator = sv.BoxAnnotator(thickness=thickness, color=palette)
+    label_annotator = sv.LabelAnnotator(color=palette, text_scale=text_scale,
+                                        text_thickness=thickness,
+                                        text_position=sv.Position.TOP_LEFT)
+
+    box_annotator.annotate(img, detections=detections)
+    label_annotator.annotate(img, detections=detections, labels=labels)
+
+    return img
+
+def process_video(model, video_path, save_path, class_dict, confidence=0.4):
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise ValueError(f"Cannot open video file: {video_path}")
+
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter(save_path, fourcc, fps, (width, height))
+
+    tracker = sv.ByteTrack(frame_rate=fps)
+    unique_tag_map = {}  # {track_id: label}
+
+    for _ in range(frame_count):
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        result = model.predict(frame, conf=confidence, verbose=False)[0]
+        detections = sv.Detections.from_ultralytics(result)
+        detections = tracker.update_with_detections(detections)
+
+        labels = [class_dict[int(cls)] for cls in detections.class_id]
+
+        # unique lable
+        for track_id, label in zip(detections.tracker_id, labels):
+            if track_id is not None:
+                unique_tag_map[track_id] = label
+
+        annotated = annotate_image(frame, detections, class_dict, confidence)
+        out.write(annotated)
+
+    cap.release()
+    out.release()
+
+    return list(unique_tag_map.values())
