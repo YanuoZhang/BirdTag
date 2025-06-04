@@ -1,10 +1,15 @@
-# detect_handler.py
+# handler.py
 
-import cv2 as cv
 import os
+import cv2 as cv
 from datetime import datetime
 from collections import Counter
 import model_utils
+# from ddb_utils import save_file_record
+
+# fake user
+BUCKET_NAME = "your-bucket"
+USER_ID = "demo_user"
 
 def run_image_detection(image_path, save_path):
     try:
@@ -25,15 +30,23 @@ def run_image_detection(image_path, save_path):
 
         labels = [class_dict[cls_id] for cls_id in detections.class_id]
         tag_counts = dict(Counter(labels))
-        print(f"[INFO] Image tags detected: {tag_counts}")
 
-        return {
-            "fileId": os.path.basename(image_path),
+        filename = os.path.basename(image_path)
+        s3_url = f"s3://{BUCKET_NAME}/images/{USER_ID}/{filename}"
+        thumbnail_url = f"s3://{BUCKET_NAME}/thumbnails/{USER_ID}/thumb_{filename}"
+
+        metadata = {
+            "fileId": filename,
             "type": "image",
             "tags": tag_counts,
-            "annotatedPath": save_path,
-            "uploadTime": datetime.utcnow().isoformat() + "Z"
+            "uploadTime": datetime.utcnow().isoformat() + "Z",
+            "user_id": USER_ID,
+            "s3Url": s3_url,
+            "thumbnailUrl": thumbnail_url
         }
+
+        # save_file_record(metadata)
+        return metadata
 
     except Exception as e:
         print(f"[ERROR] Image detection failed: {e}")
@@ -54,15 +67,21 @@ def run_video_detection(video_path, save_path, confidence=0.4):
             confidence=confidence
         )
 
-        print(f"[INFO] Video tags detected: {tag_counts}")
+        filename = os.path.basename(video_path)
+        s3_url = f"s3://{BUCKET_NAME}/videos/{USER_ID}/{filename}"
 
-        return {
-            "fileId": os.path.basename(video_path),
+        metadata = {
+            "fileId": filename,
             "type": "video",
             "tags": tag_counts,
-            "annotatedPath": save_path,
-            "uploadTime": datetime.utcnow().isoformat() + "Z"
+            "uploadTime": datetime.utcnow().isoformat() + "Z",
+            "user_id": USER_ID,
+            "s3Url": s3_url,
+            "thumbnailUrl": ""  # no thumbnailUrl in video
         }
+
+        # save_file_record(metadata)
+        return metadata
 
     except Exception as e:
         print(f"[ERROR] Video detection failed: {e}")
