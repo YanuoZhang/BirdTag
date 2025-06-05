@@ -17,5 +17,5 @@ if __name__ == "__main__":
         "crow": 2,
         "pigeon": 3
     }
-    result = lambda_handler(test_event)
+    result = lambda_handler(test_event,None)
     print(result)
