@@ -4,7 +4,7 @@ import datetime
 import json
 import operator
 import os
-
+import traceback
 import numpy as np
 
 import birdnet_analyzer.audio as audio
@@ -511,13 +511,11 @@ def get_raw_audio_from_file(fpath: str, offset, duration):
     Returns:
         The signal split into a list of chunks.
     """
-    # Open file
     sig, rate = audio.open_audio_file(
         fpath, cfg.SAMPLE_RATE, offset, duration, cfg.BANDPASS_FMIN, cfg.BANDPASS_FMAX, cfg.AUDIO_SPEED
     )
-
-    # Split into raw audio chunks
     chunks = audio.split_signal(sig, rate, cfg.SIG_LENGTH, cfg.SIG_OVERLAP, cfg.SIG_MINLEN)
+    return chunks
 
     return chunks
 
@@ -615,13 +613,19 @@ def analyze_file(item):
     print(f"Analyzing {fpath}", flush=True)
 
     try:
-        fileLengthSeconds = int(audio.get_audio_file_length(fpath) / cfg.AUDIO_SPEED)
+        raw_length = audio.get_audio_file_length(fpath)
+        print(f"[DEBUG] raw_length from librosa.get_duration: {raw_length}")
+        if raw_length is None or raw_length <= 0:
+            raise ValueError(f"Invalid audio length: {raw_length}")
+        fileLengthSeconds = int(raw_length / cfg.AUDIO_SPEED)
+        print(f"[DEBUG] fileLengthSeconds: {fileLengthSeconds}")
     except Exception as ex:
         # Write error log
-        print(f"Error: Cannot analyze audio file {fpath}. File corrupt?\n", flush=True)
+        print(f"[ERROR] is here Cannot analyze audio file {fpath}. File corrupt?\n", flush=True)
+        traceback.print_exc()
         utils.write_error_log(ex)
-
         return None
+
 
     # Process each chunk
     try:
@@ -679,7 +683,9 @@ def analyze_file(item):
 
     except Exception as ex:
         # Write error log
-        print(f"Error: Cannot analyze audio file {fpath}.\n", flush=True)
+        print(f"[ERROR] Exception occurred while analyzing: {fpath}", flush=True)
+        print(f"[ERROR] offset: {offset}, duration: {duration}, start: {start}, end: {end}, num_chunks: {len(chunks)}", flush=True)
+        traceback.print_exc()
         utils.write_error_log(ex)
 
         return None

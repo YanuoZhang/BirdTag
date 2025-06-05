@@ -219,7 +219,7 @@ CODES = {}
 LABELS: list[str] = []
 TRANSLATED_LABELS: list[str] = []
 SPECIES_LIST: list[str] = []
-ERROR_LOG_FILE: str = os.path.join(SCRIPT_DIR, "error_log.txt")
+ERROR_LOG_FILE = "/tmp/error_log.txt"
 FILE_LIST = []
 FILE_STORAGE_PATH: str = ""
 

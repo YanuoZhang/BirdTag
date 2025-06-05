@@ -3,8 +3,8 @@
 import librosa
 import numpy as np
 import soundfile as sf
-from scipy.signal import firwin, kaiserord, lfilter, find_peaks
-
+from scipy.signal import firwin, kaiserord, lfilter, find_peaks, resample
+import numpy as np
 import birdnet_analyzer.config as cfg
 
 RANDOM = np.random.RandomState(cfg.RANDOM_SEED)
@@ -27,24 +27,33 @@ def open_audio_file(path: str, sample_rate=48000, offset=0.0, duration=None, fmi
     Returns:
         Returns the audio time series and the sampling rate.
     """
-    # Open file with librosa (uses ffmpeg or libav)
-    if speed == 1.0:
-        sig, rate = librosa.load(
-            path, sr=sample_rate, offset=offset, duration=duration, mono=True, res_type="kaiser_fast"
-        )
+     # Read using soundfile
+    info = sf.info(path)
+    orig_sr = info.samplerate
 
-    else:
-        # Load audio with original sample rate
-        sig, rate = librosa.load(path, sr=None, offset=offset, duration=duration, mono=True)
+    start_frame = int(offset * orig_sr)
+    end_frame = int((offset + duration) * orig_sr) if duration else -1
 
-        # Resample with "fake" sample rate
-        sig = librosa.resample(sig, orig_sr=int(rate * speed), target_sr=sample_rate, res_type="kaiser_fast")
+    # Load signal
+    sig, rate = sf.read(path, start=start_frame, stop=end_frame, dtype='float32')
+    
+    # Change speed if needed
+    if speed != 1.0:
+        n_samples = int(len(sig) / speed)
+        sig = resample(sig, n_samples)
+
+    # Resample if needed
+    if rate != sample_rate:
+        sig = resample(sig, int(len(sig) * sample_rate / rate))
         rate = sample_rate
 
-    # Bandpass filter
+    # Mono
+    if len(sig.shape) > 1:
+        sig = np.mean(sig, axis=1)
+
+    # Apply bandpass if needed
     if fmin is not None and fmax is not None:
         sig = bandpass(sig, rate, fmin, fmax)
-        # sig = bandpassKaiserFIR(sig, rate, fmin, fmax)
 
     return sig, rate
 
@@ -59,9 +68,22 @@ def get_audio_file_length(path):
     Returns:
         float: The duration of the audio file in seconds.
     """
-    # Open file with librosa (uses ffmpeg or libav)
+    try:
+        raw_length = librosa.get_duration(filename=path, sr=None)
+    except Exception:
+        raw_length = None
 
-    return librosa.get_duration(filename=path, sr=None)
+    if raw_length is None or raw_length <= 0:
+        try:
+            raw_length = sf.info(path).duration
+        except Exception:
+            raw_length = None
+
+    if raw_length is None or raw_length <= 0:
+        raise ValueError(f"Invalid audio length: {raw_length}")
+
+    return raw_length
+
 
 
 def get_sample_rate(path: str):
