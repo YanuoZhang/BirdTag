@@ -1,0 +1,9 @@
+boto3
+tensorflow==2.15.1
+numpy
+scipy
+librosa
+resampy
+scikit-learn==1.6.1
+tqdm
+soundfile

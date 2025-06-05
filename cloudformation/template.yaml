@@ -1,0 +1,143 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy BirdTag audio tagging Lambda with ECR and S3 trigger
+
+Parameters:
+  LambdaImageUri:
+    Type: String
+    Description: ECR image URI (e.g., 123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-audio-lambda:latest)
+
+Resources:
+
+  ## 1. S3 Bucket for uploading audio
+  BirdTagAudioBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "birdtag-audio-files-${AWS::AccountId}"
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt BirdTagAudioLambda.Arn
+
+
+  ## 2. IAM Role for Lambda execution
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: birdtag-audio-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaBasicExecution
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+        - PolicyName: S3ReadAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::birdtag-audio-files-${AWS::AccountId}/*"
+
+        - PolicyName: DynamoDBWriteAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                Resource: !GetAtt BirdTagMediaTable.Arn
+
+        - PolicyName: SNSPublishAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: !Ref BirdTagNotificationTopic
+        
+        - PolicyName: SNSSubscribeAccess            
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Subscribe
+                Resource: !Ref BirdTagNotificationTopic
+
+  ## 3. Lambda function deployed from ECR
+  BirdTagAudioLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: birdtag-audio-lambda
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ImageUri: !Ref LambdaImageUri
+      PackageType: Image
+      Timeout: 300
+      MemorySize: 1024
+      Environment:
+        Variables:
+          TEMP_DIR: "/tmp"
+          TABLE_NAME: "BirdTagMedia"
+          SNS_TOPIC_ARN: !Ref BirdTagNotificationTopic
+
+  ## 4. Allow S3 to invoke Lambda
+  S3InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BirdTagAudioLambda
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub "arn:aws:s3:::birdtag-audio-files-${AWS::AccountId}"
+
+  ## 5. DynamoDB Table to store analysis results
+  BirdTagMediaTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: BirdTagMedia
+      AttributeDefinitions:
+        - AttributeName: file_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: file_id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+    
+  ## 6. SNS to send message to user
+  BirdTagNotificationTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: birdtag-analysis-finished
+
+Outputs:
+  LambdaFunctionName:
+    Description: Name of the created Lambda function
+    Value: !Ref BirdTagAudioLambda
+
+  AudioUploadBucket:
+    Description: Name of the S3 bucket to upload audio
+    Value: !Ref BirdTagAudioBucket
+  
+  MediaTableName:
+    Description: DynamoDB table name for audio metadata
+    Value: !Ref BirdTagMediaTable
+
+  NotifyTopicArn:
+    Description: ARN of the SNS topic for completion notification
+    Value: !Ref BirdTagNotificationTopic
+
