@@ -2,8 +2,9 @@ import os
 import boto3
 from boto3.dynamodb.conditions import Attr
 
-dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table(os.environ["BIRDTAG_TABLE"])
+dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
+
+table = dynamodb.Table(os.environ["BirdMedia"])
 
 def handle(event):
     """
@@ -36,3 +37,5 @@ def handle(event):
             "links": matched_links
         }
     }
+
+
