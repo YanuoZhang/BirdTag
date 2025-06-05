@@ -32,17 +32,25 @@ def lambda_handler(event, context):
     mime_type, _ = mimetypes.guess_type(key)
     print(f"[INFO] Detected MIME type: {mime_type}")
 
-    if mime_type and mime_type.startswith("image"):
-        result = run_image_detection(tmp_input_path, tmp_output_path)
-    elif mime_type and mime_type.startswith("video"):
-        result = run_video_detection(tmp_input_path, tmp_output_path)
-    else:
-        raise ValueError("Unsupported file type")
+    try:
+        if mime_type and mime_type.startswith("image"):
+            result = run_image_detection(tmp_input_path, tmp_output_path, bucket)
+        elif mime_type and mime_type.startswith("video"):
+            result = run_video_detection(tmp_input_path, tmp_output_path, bucket)
+        else:
+            raise ValueError("Unsupported file type")
 
-    print("[INFO] Detection Result:")
-    print(json.dumps(result, indent=2))
+        print("[INFO] Detection Result:")
+        print(json.dumps(result, indent=2))
 
-    return {
-        "statusCode": 200,
-        "body": json.dumps({"message": "Detection completed", "result": result})
-    }
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"message": "Detection completed", "result": result})
+        }
+
+    except Exception as e:
+        print(f"[ERROR] Lambda processing failed: {e}")
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": str(e)})
+        }

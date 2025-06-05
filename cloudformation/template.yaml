@@ -12,10 +12,6 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub "birdtag-media-files-${AWS::AccountId}"
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: s3:ObjectCreated:*
-            Function: !GetAtt BirdTagMediaLambda.Arn
 
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -46,7 +42,7 @@ Resources:
       Environment:
         Variables:
           TEMP_DIR: "/tmp"
-          # TABLE_NAME: "BirdTagFiles"
+          TABLE_NAME: "BirdTagMedia"
 
   S3InvokePermission:
     Type: AWS::Lambda::Permission
@@ -64,3 +60,7 @@ Outputs:
   MediaUploadBucket:
     Description: Name of the S3 bucket to upload images/videos
     Value: !Ref BirdTagMediaBucket
+
+  DynamoDBTableName:
+    Description: DynamoDB table name used by Lambda
+    Value: "BirdTagMedia"

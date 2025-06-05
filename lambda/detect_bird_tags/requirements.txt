@@ -1,4 +1,9 @@
-ultralytics
+# Avoid pulling in GPU/extra deps
+torch==2.2.2+cpu
+torchvision==0.17.2+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+ultralytics==8.2.5
 supervision
 opencv-python-headless
 matplotlib

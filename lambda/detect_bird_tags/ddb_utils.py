@@ -2,9 +2,12 @@
 
 import boto3
 import uuid
+import os
 
 dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table("birdtag_files")  
+table_name = os.environ.get("TABLE_NAME", "BirdTagMedia")
+table = dynamodb.Table(table_name)
+
 
 def save_file_record(metadata: dict):
     """
@@ -22,7 +25,11 @@ def save_file_record(metadata: dict):
         "tags_flat": list(metadata["tags"].keys())
     }
 
-    table.put_item(Item=item)
-    print("[INFO] Successfully saved to DynamoDB")
+    try:
+        table.put_item(Item=item)
+        print("[INFO] Successfully saved to DynamoDB")
+    except Exception as e:
+        print(f"[ERROR] Failed to save to DynamoDB: {e}")
+        raise
 
     
