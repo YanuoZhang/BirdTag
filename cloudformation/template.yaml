@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy BirdTag image/video tagging Lambda with ECR and S3 trigger
+
+Parameters:
+  LambdaImageUri:
+    Type: String
+    Description: ECR image URI (e.g., 123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-image-video:latest)
+
+Resources:
+
+  BirdTagMediaBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "birdtag-media-files-${AWS::AccountId}"
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt BirdTagMediaLambda.Arn
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: birdtag-image-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+
+  BirdTagMediaLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: birdtag-image-lambda
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ImageUri: !Ref LambdaImageUri
+      PackageType: Image
+      Timeout: 300
+      MemorySize: 1024
+      Environment:
+        Variables:
+          TEMP_DIR: "/tmp"
+          # TABLE_NAME: "BirdTagFiles"
+
+  S3InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BirdTagMediaLambda
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub "arn:aws:s3:::birdtag-media-files-${AWS::AccountId}"
+
+Outputs:
+  LambdaFunctionName:
+    Description: Name of the created Lambda function
+    Value: !Ref BirdTagMediaLambda
+
+  MediaUploadBucket:
+    Description: Name of the S3 bucket to upload images/videos
+    Value: !Ref BirdTagMediaBucket

@@ -1,7 +1,6 @@
-roboflow 
-ultralytics 
+ultralytics
 supervision
-opencv-python
+opencv-python-headless
 matplotlib
 numpy
 requests
