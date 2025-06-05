@@ -1,13 +1,25 @@
 {
-  "file_id": "abc123",
-  "user_id": "u001",
-  "file_type": "image",
-  "upload_time": "2025-06-04T10:10:00Z",
-  "s3_url": "https://xxx.s3.amazonaws.com/image1.jpg",
-  "thumbnail_url": "https://xxx.s3.amazonaws.com/image1-thumb.jpg",
-  "tags": {
-    "crow": 2,
-    "pigeon": 1
-  },
-  "tags_flat": ["crow", "pigeon"]
+  "BirdMedia": [
+    {
+      "file_id": "abc123",
+      "user_id": "u001",
+      "user_email": "aaaa@gmail.com",
+      "file_type": "image",
+      "upload_time": "2025-06-04T10:10:00Z",
+      "s3_url": "https://xxx.s3.amazonaws.com/image1.jpg",
+      "thumbnail_url": "https://xxx.s3.amazonaws.com/image1-thumb.jpg",
+      "tags": {
+        "crow": 2,
+        "pigeon": 1
+      },
+      "tags_flat": ["crow", "pigeon"]
+    }
+  ],
+  "BirdUsers": [
+    {
+      "user_id": "u001",
+      "user_password": "abcde12345",
+      "user_email": "aaaa@gmail.com"
+    }
+  ]
 }
