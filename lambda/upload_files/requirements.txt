@@ -1,0 +1,2 @@
+# For S3 access and other AWS services
+boto3
