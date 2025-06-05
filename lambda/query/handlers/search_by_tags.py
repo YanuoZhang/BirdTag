@@ -15,7 +15,10 @@ def handle(event):
     }
     """
 
-    required_tags = event  # e.g., {"crow": 2, "pigeon": 3}
+    required_tags = {
+        k: int(v) for k, v in event.items()
+        if k != "action"
+    }  # e.g., {"crow": 2, "pigeon": 3}
 
     # Step 1: full table scan
     response = table.scan()

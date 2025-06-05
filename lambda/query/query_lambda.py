@@ -14,8 +14,7 @@ def lambda_handler(event, context):
 if __name__ == "__main__":
     test_event = {
         "action": "search_by_tags",
-        "crow": 2,
-        "pigeon": 3
+        "crow": 1
     }
     result = lambda_handler(test_event,None)
     print(result)
