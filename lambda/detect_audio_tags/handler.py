@@ -5,12 +5,12 @@ import traceback
 from datetime import datetime
 from urllib.parse import unquote_plus
 import soundfile as sf
-
 from config_class import AnalyzerConfig
 from birdnet_analyzer.analyze.core import analyze
 
 os.environ["NUMBA_DISABLE_CACHE"] = "1"
 
+sns_client = boto3.client('sns')
 s3_client = boto3.client('s3')
 dynamodb = boto3.resource('dynamodb')
 table_name = os.environ.get("TABLE_NAME", "BirdTagMedia")
@@ -68,9 +68,10 @@ def lambda_handler(event, context):
         # Flatten tag list
         tag_list = list(tags.keys())
         audio_s3_url = f"https://{bucket}.s3.amazonaws.com/{key}"
-
+        user_email = "yzha1113@student.monash.edu"
         item = {
             "file_id": file_id,
+            "user_email": user_email,
             "user_id": "anonymous",  # TODO change to real id from token
             "filename": key,
             "file_type": "audio",
@@ -84,6 +85,9 @@ def lambda_handler(event, context):
         print("Saving result to DynamoDB:", json.dumps(item, indent=2))
         dynamo_table.put_item(Item=item)
 
+        # Send notification via SNS
+        send_email_notification(user_email, file_id)
+        print("SNS notification sent to topic.")
         return {
             "statusCode": 200,
             "body": json.dumps(item)
@@ -96,3 +100,28 @@ def lambda_handler(event, context):
             "statusCode": 500,
             "body": json.dumps({"error": str(e)})
         }
+
+
+def send_email_notification(email: str, file_id: str):
+    topic_arn = os.environ["SNS_TOPIC_ARN"]
+    
+    # Step 1: Dynamically subscribe the user's email
+    subscribe_response = sns_client.subscribe(
+        TopicArn=topic_arn,
+        Protocol='email',
+        Endpoint=email,
+        ReturnSubscriptionArn=True
+    )
+    print("Subscribe response:", subscribe_response)
+
+    # Step 2: Send notification (won't work unless user confirms)
+    message = f"Hi! Your audio file '{file_id}' has been analyzed and is now available. Please check the results."
+    subject = "BirdTag Analysis Completed"
+
+    # Note: this will only deliver if user already confirmed the subscription
+    response = sns_client.publish(
+        TopicArn=topic_arn,
+        Message=message,
+        Subject=subject
+    )
+    print("SNS publish response:", response)

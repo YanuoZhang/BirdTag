@@ -31,11 +31,53 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
-        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess  
+      Policies:
+        - PolicyName: LambdaBasicExecution
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+        - PolicyName: S3ReadAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::birdtag-audio-files-${AWS::AccountId}/*"
+
+        - PolicyName: DynamoDBWriteAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                Resource: !GetAtt BirdTagMediaTable.Arn
+
+        - PolicyName: SNSPublishAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: !Ref BirdTagNotificationTopic
         
+        - PolicyName: SNSSubscribeAccess            
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Subscribe
+                Resource: !Ref BirdTagNotificationTopic
 
   ## 3. Lambda function deployed from ECR
   BirdTagAudioLambda:
@@ -51,7 +93,8 @@ Resources:
       Environment:
         Variables:
           TEMP_DIR: "/tmp"
-          # TABLE_NAME: "BirdTagMedia"
+          TABLE_NAME: "BirdTagMedia"
+          SNS_TOPIC_ARN: !Ref BirdTagNotificationTopic
 
   ## 4. Allow S3 to invoke Lambda
   S3InvokePermission:
@@ -62,18 +105,24 @@ Resources:
       Principal: s3.amazonaws.com
       SourceArn: !Sub "arn:aws:s3:::birdtag-audio-files-${AWS::AccountId}"
 
-
-  # BirdTagMediaTable:
-  #   Type: AWS::DynamoDB::Table
-  #   Properties:
-  #     TableName: BirdTagMedia
-  #     AttributeDefinitions:
-  #       - AttributeName: media_id
-  #         AttributeType: S
-  #     KeySchema:
-  #       - AttributeName: media_id
-  #         KeyType: HASH
-  #     BillingMode: PAYPERREQUEST
+  ## 5. DynamoDB Table to store analysis results
+  BirdTagMediaTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: BirdTagMedia
+      AttributeDefinitions:
+        - AttributeName: file_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: file_id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+    
+  ## 6. SNS to send message to user
+  BirdTagNotificationTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: birdtag-analysis-finished
 
 Outputs:
   LambdaFunctionName:
@@ -83,4 +132,12 @@ Outputs:
   AudioUploadBucket:
     Description: Name of the S3 bucket to upload audio
     Value: !Ref BirdTagAudioBucket
+  
+  MediaTableName:
+    Description: DynamoDB table name for audio metadata
+    Value: !Ref BirdTagMediaTable
+
+  NotifyTopicArn:
+    Description: ARN of the SNS topic for completion notification
+    Value: !Ref BirdTagNotificationTopic
 

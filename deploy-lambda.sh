@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-TAG=$(date +"v%Y%m%d-%H%M")
+TAG=lastest
 REPO_NAME=birdtag-audio-lambda
 REGION=ap-southeast-2
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
