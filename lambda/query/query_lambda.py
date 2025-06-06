@@ -19,8 +19,8 @@ def lambda_handler(event, context):
 
 if __name__ == "__main__":
     test_event = {
-        "action": "search_by_thumbnail",
-        "thumbnail_url": "https://s3.amazonaws.com/birdtag/thumbs/file001-thumb.jpg"
+        "action": "search_by_tags",
+        "crow": 1
     }
     result = lambda_handler(test_event,None)
     print(result)

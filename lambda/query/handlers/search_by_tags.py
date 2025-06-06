@@ -8,7 +8,7 @@ table = dynamodb.Table(os.environ.get("BIRDTAG_TABLE", "BirdMedia"))
 
 def handle(event):
     """
-    Event expected format:
+    Expected input:
     {
         "crow": 2,
         "pigeon": 3
@@ -30,9 +30,16 @@ def handle(event):
     for item in items:
         tags = item.get("tags", {})
         if all(tags.get(tag, 0) >= count for tag, count in required_tags.items()):
-            thumbnail = item.get("thumbnail_url")
-            if thumbnail:
-                matched_links.append(thumbnail)
+            file_type = item.get("file_type", "") 
+
+            if file_type == "image":
+                link = item.get("thumbnail_url")
+            elif file_type == "video":
+                link = item.get("s3_url") 
+            else:
+                continue
+            if link:
+                matched_links.append(link)
 
     return {
         "statusCode": 200,
