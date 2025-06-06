@@ -13,11 +13,13 @@ AUDIO_IMAGE_URI="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPO_NAME:$AUDIO_TAG
 # docker tag birdtag-upload-files:upload-latest 698342338581.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-lambda:upload-latest
 # aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin 698342338581.dkr.ecr.ap-southeast-2.amazonaws.com
 # docker push 698342338581.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-lambda:upload-latest
-
+# docker tag birdtag-audio-lambda:audio-latest 698342338581.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-lambda:audio-latest
+# docker push 698342338581.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-lambda:audio-latest
 # aws lambda update-function-code \
-#   --function-name generate-presigned-url-handler \
-#   --image-uri 698342338581.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-lambda:upload-latest \
+#   --function-name birdtag-audio-lambda \
+#   --image-uri 698342338581.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-lambda:audio-latest \
 #   --publish
+
 UPLOAD_IMAGE_URI
 echo "[1/6] Checking if ECR repository exists..."
 aws ecr describe-repositories --repository-names "$REPO_NAME" > /dev/null 2>&1 || {
