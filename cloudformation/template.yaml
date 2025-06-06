@@ -78,6 +78,7 @@ Resources:
                 Action:
                   - dynamodb:PutItem
                   - dynamodb:UpdateItem
+                  - dynamodb:Scan   
                 Resource: !GetAtt BirdTagMediaTable.Arn
               - Effect: Allow
                 Action:
@@ -189,7 +190,9 @@ Resources:
   ## API Deployment
   UploadApiDeployment:
     Type: AWS::ApiGateway::Deployment
-    DependsOn: UploadPostMethod
+    DependsOn: 
+      - UploadPostMethod
+      - AnalyzeAudioPostMethod
     Properties:
       RestApiId: !Ref BirdTagUploadApi
       StageName: prod
@@ -218,6 +221,40 @@ Resources:
             Condition:
               StringEquals:
                 s3:x-amz-acl: "bucket-owner-full-control"
+
+ ## API Resource /analyze-audio
+  AnalyzeAudioResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref BirdTagUploadApi
+      ParentId: !GetAtt BirdTagUploadApi.RootResourceId
+      PathPart: analyze-audio
+
+  AnalyzeAudioPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref BirdTagUploadApi
+      ResourceId: !Ref AnalyzeAudioResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub
+          - arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - Region: !Ref AWS::Region
+            LambdaArn: !GetAtt BirdTagAudioLambda.Arn
+      MethodResponses:
+        - StatusCode: 200
+
+  ## Permission for API Gateway to invoke BirdTagAudioLambda
+  AnalyzeAudioApiInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BirdTagAudioLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BirdTagUploadApi}/*/POST/analyze-audio
 
 Outputs:
   LambdaFunctionName:
