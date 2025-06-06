@@ -1,5 +1,3 @@
-# model_utils.py
-
 from ultralytics import YOLO
 import supervision as sv
 import cv2
@@ -12,6 +10,11 @@ MODEL = None
 
 def get_model():
     global MODEL
+
+    base_dir = os.path.dirname(__file__)
+    model_path = os.path.join(base_dir, "model.pt")
+    print(f"[INFO] Loading model from: {model_path}")
+    
     if MODEL is None:
         base_dir = os.path.dirname(__file__)
         model_path = os.path.join(base_dir, "model.pt")

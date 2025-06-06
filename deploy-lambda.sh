@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 set -e
 
 TAG=$(date +"v%Y%m%d-%H%M")
@@ -34,3 +34,5 @@ aws cloudformation deploy \
   --no-fail-on-empty-changeset
 
 echo "Deployment complete with image tag: $TAG"
+
+  # --parameter-overrides LambdaImageUri="$(aws sts get-caller-identity --query Account --output text).dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-image-video:v20250606-1529" \

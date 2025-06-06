@@ -8,11 +8,6 @@ Parameters:
 
 Resources:
 
-  BirdTagMediaBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "birdtag-media-files-${AWS::AccountId}"
-
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -38,11 +33,21 @@ Resources:
         ImageUri: !Ref LambdaImageUri
       PackageType: Image
       Timeout: 300
-      MemorySize: 1024
+      MemorySize: 3008
       Environment:
         Variables:
           TEMP_DIR: "/tmp"
           TABLE_NAME: "BirdTagMedia"
+
+  BirdTagMediaBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "birdtag-media-files-${AWS::AccountId}"
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt BirdTagMediaLambda.Arn
+    DependsOn: BirdTagMediaLambda
 
   S3InvokePermission:
     Type: AWS::Lambda::Permission

@@ -27,15 +27,20 @@
 
 FROM public.ecr.aws/lambda/python:3.10
 
-# Add libGL for OpenCV
+# 
 RUN yum install -y mesa-libGL && yum clean all
 
-# Install Python dependencies
+# 
+ENV MPLCONFIGDIR=/tmp
+ENV ULTRALYTICS_SETTINGS=/tmp
+ENV YOLO_CONFIG_DIR=/tmp
+
+#
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy your code
+# 
 COPY handler.py lambda_handler.py model_utils.py ddb_utils.py model.pt ./
 
-# Entry point for Lambda
+# Lambda 
 CMD ["lambda_handler.lambda_handler"]
