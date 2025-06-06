@@ -6,7 +6,7 @@ table = dynamodb.Table(os.environ.get("BIRDTAG_TABLE", "BirdMedia"))
 
 def handle(event):
     """
-    Expected input format:
+    Expected input:
     {
         "species": ["crow", "parrot"]
     }
