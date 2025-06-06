@@ -15,7 +15,7 @@ echo "Deploying CloudFormation stack (Lambda, S3, DynamoDB, etc)..."
 
 aws cloudformation deploy \
   --template-file cloudformation/template.yaml \
-  --stack-name birdtag-lambda-stack \
+  --stack-name birdtag-stack \
   --parameter-overrides \
       LambdaImageUri=$AUDIO_IMAGE_URI \
       UploadImageUri=$UPLOAD_IMAGE_URI \
@@ -23,3 +23,8 @@ aws cloudformation deploy \
   --no-fail-on-empty-changeset
 
 echo "Deployment complete."
+
+aws cloudformation describe-stacks \
+  --stack-name birdtag-stack \
+  --query "Stacks[0].Outputs" \
+  --output table
