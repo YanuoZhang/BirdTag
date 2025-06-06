@@ -14,7 +14,7 @@ from ddb_utils import save_file_record
 
 s3_client = boto3.client("s3")
 
-def run_image_detection(image_path, save_path, bucket, user_id="demo_user"):
+def run_image_detection(image_path, save_path, bucket, user_id="demo_user", skip_upload=False):  # Added param: skip_upload
     try:
         print(f"[INFO] Starting image detection for: {image_path}")
         model = model_utils.get_model()
@@ -40,17 +40,7 @@ def run_image_detection(image_path, save_path, bucket, user_id="demo_user"):
         resized = cv.resize(img, (int(width * scale), int(height * scale)))
         cv.imwrite(tmp_thumb_path, resized)
 
-        # === Upload annotated image ===
-        s3_output_key = f"annotated/{user_id}/{os.path.basename(save_path)}"
-        s3_client.upload_file(save_path, bucket, s3_output_key)
-        s3_url = f"https://{bucket}.s3.amazonaws.com/{s3_output_key}"
-
-        # === Upload thumbnail ===
-        s3_thumb_key = f"thumbnails/{user_id}/{thumb_name}"
-        s3_client.upload_file(tmp_thumb_path, bucket, s3_thumb_key)
-        thumbnail_url = f"https://{bucket}.s3.amazonaws.com/{s3_thumb_key}"
-
-        # === Tag stats and metadata ===
+        # Prepare metadata
         labels = [class_dict[cls_id] for cls_id in detections.class_id]
         tag_counts = dict(Counter(labels))
 
@@ -60,11 +50,23 @@ def run_image_detection(image_path, save_path, bucket, user_id="demo_user"):
             "tags": tag_counts,
             "uploadTime": datetime.utcnow().isoformat() + "Z",
             "user_id": user_id,
-            "s3Url": s3_url,
-            "thumbnailUrl": thumbnail_url
+            "s3Url": "",
+            "thumbnailUrl": ""
         }
 
-        save_file_record(metadata)
+        if not skip_upload:  # Added: skip upload and database write if in temp query mode
+            s3_output_key = f"annotated/{user_id}/{os.path.basename(save_path)}"
+            s3_client.upload_file(save_path, bucket, s3_output_key)
+            s3_url = f"https://{bucket}.s3.amazonaws.com/{s3_output_key}"
+
+            s3_thumb_key = f"thumbnails/{user_id}/{thumb_name}"
+            s3_client.upload_file(tmp_thumb_path, bucket, s3_thumb_key)
+            thumbnail_url = f"https://{bucket}.s3.amazonaws.com/{s3_thumb_key}"
+
+            metadata["s3Url"] = s3_url
+            metadata["thumbnailUrl"] = thumbnail_url
+
+            save_file_record(metadata)
 
         return metadata
 
@@ -73,7 +75,7 @@ def run_image_detection(image_path, save_path, bucket, user_id="demo_user"):
         raise
 
 
-def run_video_detection(video_path, save_path, bucket, user_id="demo_user"):
+def run_video_detection(video_path, save_path, bucket, user_id="demo_user", skip_upload=False):  # Added param: skip_upload
     try:
         print(f"[INFO] Starting video detection for: {video_path}")
         model = model_utils.get_model()
@@ -87,23 +89,23 @@ def run_video_detection(video_path, save_path, bucket, user_id="demo_user"):
             confidence=0.4
         )
 
-        # === Upload annotated video ===
-        filename = os.path.basename(video_path)
-        s3_output_key = f"annotated/{user_id}/{filename}"
-        s3_client.upload_file(save_path, bucket, s3_output_key)
-        s3_url = f"https://{bucket}.s3.amazonaws.com/{s3_output_key}"
-
         metadata = {
-            "fileId": filename,
+            "fileId": os.path.basename(video_path),
             "type": "video",
             "tags": tag_counts,
             "uploadTime": datetime.utcnow().isoformat() + "Z",
             "user_id": user_id,
-            "s3Url": s3_url,
-            "thumbnailUrl": ""  # no thumbnailUrl for video
+            "s3Url": "",
+            "thumbnailUrl": ""
         }
 
-        save_file_record(metadata)
+        if not skip_upload:  # Added: skip upload and DB write in temp analysis
+            s3_output_key = f"annotated/{user_id}/{os.path.basename(video_path)}"
+            s3_client.upload_file(save_path, bucket, s3_output_key)
+            s3_url = f"https://{bucket}.s3.amazonaws.com/{s3_output_key}"
+            metadata["s3Url"] = s3_url
+
+            save_file_record(metadata)
 
         return metadata
 

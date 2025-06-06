@@ -1,11 +1,7 @@
-# Avoid pulling in GPU/extra deps
-torch==2.2.2+cpu
-torchvision==0.17.2+cpu
---extra-index-url https://download.pytorch.org/whl/cpu
-
-ultralytics==8.2.13
+roboflow 
+ultralytics 
 supervision
-opencv-python-headless==4.8.0.74
-matplotlib==3.7.1
-numpy==1.24.3
-requests==2.31.0
+opencv-python
+matplotlib
+numpy==1.26.4
+requests
