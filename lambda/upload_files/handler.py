@@ -1,81 +1,78 @@
-import base64
 import boto3
-import mimetypes
 import os
-from datetime import datetime
+import json
+import time
+import mimetypes
+from botocore.config import Config
 
-# Initialize S3 client
-s3 = boto3.client("s3")
+# Initialize the S3 client with virtual-hosted-style addressing
+s3 = boto3.client(
+    's3',
+    region_name='ap-southeast-2',
+    config=Config(s3={'addressing_style': 'virtual'}),
+    endpoint_url='https://s3.ap-southeast-2.amazonaws.com' 
+)
 
-# Retrieve the target bucket name from environment variables
-MEDIA_BUCKET = os.environ["MEDIA_BUCKET"]
+# Get the S3 bucket name from the environment variable
+bucket = os.environ['MEDIA_BUCKET']
 
-# Determine media type based on file extension
-def get_media_type(filename):
-    mime_type, _ = mimetypes.guess_type(filename)
-    if not mime_type:
-        return "unknown"
-    if mime_type.startswith("audio"):
-        return "audio"
-    elif mime_type.startswith("video"):
-        return "video"
-    elif mime_type.startswith("image"):
-        return "image"
-    else:
-        return "unknown"
+# Allowed MIME types
+ALLOWED_TYPES = {
+    'image/jpeg': 'image',
+    'image/png': 'image',
+    'audio/mpeg': 'audio',
+    'audio/wav': 'audio',
+    'audio/x-wav': 'audio',
+    'video/mp4': 'video'
+}
 
-# Lambda entry point
 def lambda_handler(event, context):
     try:
-        # Retrieve the request body
-        body = event.get("body")
+        print("Event:", json.dumps(event))
 
-        # Decode base64 if needed
-        if event.get("isBase64Encoded", False):
-            body = base64.b64decode(body)
-        else:
-            body = body.encode("utf-8")  # Ensure it's bytes
+        body = json.loads(event['body'])
+        filename = body['filename']
 
-        # Get the filename from query string parameters
-        query = event.get("queryStringParameters", {})
-        filename = query.get("filename")
+        # Guess the MIME type from the file extension
+        content_type, _ = mimetypes.guess_type(filename)
+        if content_type is None:
+            content_type = 'application/octet-stream'
 
-        # Basic validation
-        if not filename or not body:
-            return {
-                "statusCode": 400,
-                "body": "Missing filename or body in request"
-            }
+        # Check if the content type is supported
+        if content_type not in ALLOWED_TYPES:
+            raise ValueError(f"Unsupported content type: {content_type}")
 
-        # Detect media type: audio, video, or image
-        media_type = get_media_type(filename)
-        if media_type == "unknown":
-            return {
-                "statusCode": 400,
-                "body": "Unsupported file type"
-            }
+        # Determine the upload folder based on MIME type
+        folder = ALLOWED_TYPES[content_type]
 
-        # Create unique S3 object key with timestamp
-        timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-        s3_key = f"{media_type}/{timestamp}-{filename}"
+        # Create timestamp-based key with appropriate folder
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        key = f"uploads/{folder}/{timestamp}-{filename}"
 
-        # Upload the file to S3
-        s3.put_object(
-            Bucket=MEDIA_BUCKET,
-            Key=s3_key,
-            Body=body,
-            ContentType=mimetypes.guess_type(filename)[0] or "binary/octet-stream"
+        # Generate the presigned URL
+        url = s3.generate_presigned_url(
+            ClientMethod='put_object',
+            Params={
+                'Bucket': bucket,
+                'Key': key
+            },
+            ExpiresIn=300
         )
 
-        # Return success response
         return {
             "statusCode": 200,
-            "body": f"File uploaded to s3://{MEDIA_BUCKET}/{s3_key}"
+            "headers": { "Content-Type": "application/json" },
+            "body": json.dumps({
+                "url": url,
+                "key": key,
+                "contentType": content_type
+            })
         }
 
     except Exception as e:
-        # Handle any unexpected errors
+        print("Error occurred:", str(e))
         return {
             "statusCode": 500,
-            "body": f"Upload failed: {str(e)}"
+            "body": json.dumps({ "error": str(e) }),
+            "headers": { "Content-Type": "application/json" }
         }

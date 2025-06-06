@@ -4,105 +4,19 @@ Description: Deploy BirdTag audio tagging Lambda with ECR and S3 prefix trigger
 Parameters:
   LambdaImageUri:
     Type: String
-    Description: ECR image URI for Detect Audio Handler(e.g., 123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-lambda:latest)
+    Description: ECR image URI for Detect Audio Handler
   UploadImageUri:
     Type: String
-    Description: ECR image URI for Upload Handler (e.g., 123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-lambda:upload-latest)
+    Description: ECR image URI for Upload Handler
 
 Resources:
 
-  ## 1. Unified S3 Bucket for media uploads (audio, video, image)
-  BirdTagMediaBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "birdtag-media-${AWS::AccountId}"
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: prefix
-                    Value: audio/
-            Function: !GetAtt BirdTagAudioLambda.Arn
-
-  ## 2. IAM Role for Lambda execution
-  LambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: birdtag-audio-lambda-role
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: LambdaBasicExecution
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: "*"
-
-        - PolicyName: S3ReadAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                Resource: !Sub "arn:aws:s3:::birdtag-media-${AWS::AccountId}/*"
-
-        - PolicyName: DynamoDBWriteAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:PutItem
-                Resource: !GetAtt BirdTagMediaTable.Arn
-
-        - PolicyName: SNSPublishAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - sns:Publish
-                Resource: !Ref BirdTagNotificationTopic
-
-        - PolicyName: SNSSubscribeAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - sns:Subscribe
-                Resource: !Ref BirdTagNotificationTopic
-
-        - PolicyName: LambdaECRReadAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - ecr:GetAuthorizationToken
-                  - ecr:BatchGetImage
-                  - ecr:GetDownloadUrlForLayer
-                Resource: "*"
-
-  ## 3. Lambda function for audio analysis (from ECR)
+  ## Audio Lambda Function
   BirdTagAudioLambda:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: birdtag-audio-lambda
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt AudioLambdaExecutionRole.Arn
       Code:
         ImageUri: !Ref LambdaImageUri
       PackageType: Image
@@ -114,16 +28,113 @@ Resources:
           TABLE_NAME: "BirdTagMedia"
           SNS_TOPIC_ARN: !Ref BirdTagNotificationTopic
 
-  ## 4. Permission for S3 to invoke audio analysis Lambda
+  ## Unified S3 Bucket with direct notification configuration
+  BirdTagMediaBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "birdtag-media-${AWS::AccountId}"
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: uploads/audio/
+            Function: !GetAtt BirdTagAudioLambda.Arn
+
+  ## Permission for S3 to invoke Audio Lambda
   S3InvokePermissionForAudio:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref BirdTagAudioLambda
       Action: lambda:InvokeFunction
       Principal: s3.amazonaws.com
-      SourceArn: !Sub "arn:aws:s3:::birdtag-media-${AWS::AccountId}"
+      SourceArn: !Sub arn:aws:s3:::birdtag-media-${AWS::AccountId}
 
-  ## 5. DynamoDB Table to store analysis results
+  ## IAM Role for Audio Lambda
+  AudioLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: birdtag-audio-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AudioLambdaExecution
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:*
+                  - s3:GetObject
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                Resource: !GetAtt BirdTagMediaTable.Arn
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                  - sns:Subscribe
+                Resource: !Ref BirdTagNotificationTopic
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource: "*"
+
+  ## Upload Lambda Function
+  UploadHandlerLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: generate-presigned-url-handler
+      Role: !GetAtt UploadHandlerRole.Arn
+      Code:
+        ImageUri: !Ref UploadImageUri
+      PackageType: Image
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          MEDIA_BUCKET: !Ref BirdTagMediaBucket
+
+  ## IAM Role for Upload Lambda
+  UploadHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: birdtag-upload-handler-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: UploadHandlerExecution
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource: "*"
+
+  ## DynamoDB Table
   BirdTagMediaTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -136,49 +147,77 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
-  ## 6. SNS Topic to send message to user
+  ## SNS Topic
   BirdTagNotificationTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: birdtag-analysis-finished
 
-  ## 7. UploadHandler Lambda - Receives file, detects type, uploads to S3
-  UploadHandlerLambda:
-    Type: AWS::Lambda::Function
+  ## REST API
+  BirdTagUploadApi:
+    Type: AWS::ApiGateway::RestApi
     Properties:
-      FunctionName: birdtag-upload-handler
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Code:
-        ImageUri: !Ref UploadImageUri
-      PackageType: Image
-      Timeout: 30
-      MemorySize: 256
-      Environment:
-        Variables:
-          MEDIA_BUCKET: !Ref BirdTagMediaBucket
+      Name: birdtag-upload-api
+      EndpointConfiguration:
+        Types: [REGIONAL]
 
-  ## 8. Permission for API Gateway or external caller (optional - use if integrating API Gateway)
-  UploadHandlerInvokePermission:
+  ## API Resource /upload
+  UploadResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref BirdTagUploadApi
+      ParentId: !GetAtt BirdTagUploadApi.RootResourceId
+      PathPart: upload
+
+  UploadPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref BirdTagUploadApi
+      ResourceId: !Ref UploadResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub
+          - arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - Region: !Ref AWS::Region
+            LambdaArn: !GetAtt UploadHandlerLambda.Arn
+      MethodResponses:
+        - StatusCode: 200
+
+  ## API Deployment
+  UploadApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: UploadPostMethod
+    Properties:
+      RestApiId: !Ref BirdTagUploadApi
+      StageName: prod
+
+  ## Permission for API Gateway to invoke Upload Lambda
+  UploadApiLambdaInvokePermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref UploadHandlerLambda
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      # SourceArn: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/POST/upload
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BirdTagUploadApi}/*/POST/upload
 
-  ## 9. Grant UploadHandler permission to write to S3
-  UploadHandlerS3PutAccess:
-    Type: AWS::IAM::Policy
+  BirdTagMediaBucketPolicy:
+    Type: AWS::S3::BucketPolicy
     Properties:
-      PolicyName: upload-handler-s3-write
-      Roles: [!Ref LambdaExecutionRole]
+      Bucket: !Ref BirdTagMediaBucket
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Effect: Allow
-            Action:
-              - s3:PutObject
-            Resource: !Sub "arn:aws:s3:::birdtag-media-${AWS::AccountId}/*"
+          - Sid: AllowPresignedUpload
+            Effect: Allow
+            Principal: "*"
+            Action: "s3:PutObject"
+            Resource: !Sub "${BirdTagMediaBucket.Arn}/uploads/*"
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: "bucket-owner-full-control"
 
 Outputs:
   LambdaFunctionName:
@@ -196,3 +235,11 @@ Outputs:
   NotifyTopicArn:
     Description: ARN of the SNS topic for completion notification
     Value: !Ref BirdTagNotificationTopic
+
+  UploadHandlerFunctionName:
+    Description: Upload Lambda Function Name
+    Value: !Ref UploadHandlerLambda
+
+  UploadApiEndpoint:
+    Description: API Gateway endpoint to upload media
+    Value: !Sub "https://${BirdTagUploadApi}.execute-api.${AWS::Region}.amazonaws.com/prod/upload"
