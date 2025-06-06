@@ -2,6 +2,7 @@ from handlers.search_by_tags import handle as search_by_tags
 from handlers.search_by_species import handle as search_by_species
 from handlers.search_by_thumbnail import handle as search_by_thumbnail
 from handlers.manual_tag_edit import handle as manual_tag_edit
+from handlers.delete_files import handle as delete_files
 
 def lambda_handler(event, context):
     action = event.get("action")
@@ -14,6 +15,9 @@ def lambda_handler(event, context):
         return search_by_thumbnail(event)
     elif action == "manual_tag_edit":
         return manual_tag_edit(event)
+    elif action == "delete_files":
+        return delete_files(event)
+
     else:
         return {
             "statusCode": 400,
@@ -22,12 +26,11 @@ def lambda_handler(event, context):
 
 if __name__ == "__main__":
     test_event = {
-        "action": "manual_tag_edit",
-        "file_id": "file001",
-        "edit_action": "add",
-        "tags": {
-            "pigeon": 5
-        }
+        "action": "delete_files",
+        "urls": [
+            "https://s3.amazonaws.com/birdtag/file001.jpg",
+            "https://s3.amazonaws.com/birdtag/file003.wav"
+        ]
     }
     result = lambda_handler(test_event,None)
     print(result)
