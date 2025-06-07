@@ -13,7 +13,7 @@ def test_image():
     output_path = os.path.join(BASE_DIR, "..", "..", "test_output", "annotated_crows_1.jpg")
 
     try:
-        result = run_image_detection(image_path=input_path, save_path=output_path,bucket="test")
+        result = run_image_detection(image_path=input_path, save_path=output_path,bucket="test",skip_upload=True)
         print("Detection Result (Image):")
         for k, v in result.items():
             print(f"  {k}: {v}")
@@ -29,7 +29,7 @@ def test_video():
     output_path = os.path.join(BASE_DIR, "..", "..", "test_output", "annotated_kingfisher.mp4")
 
     try:
-        result = run_video_detection(video_path=input_path, save_path=output_path, bucket="test")
+        result = run_video_detection(video_path=input_path, save_path=output_path, bucket="test",skip_upload=True)
         print("Detection Result (Video):")
         for k, v in result.items():
             print(f"  {k}: {v}")
@@ -40,6 +40,6 @@ def test_video():
 if __name__ == "__main__":
     os.makedirs(os.path.join(BASE_DIR, "..", "..", "test_output"), exist_ok=True)
 
-    test_image()
-    # test_video()  
+    # test_image()
+    test_video()  
 

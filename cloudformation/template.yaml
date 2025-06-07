@@ -46,6 +46,11 @@ Resources:
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: s3:ObjectCreated:*
+            Filter:  # Added: Only trigger Lambda on files under "uploads/"
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: uploads/
             Function: !GetAtt BirdTagMediaLambda.Arn
     DependsOn: BirdTagMediaLambda
 

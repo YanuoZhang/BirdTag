@@ -33,6 +33,17 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
   --no-fail-on-empty-changeset
 
+# aws cloudformation deploy \
+#   --template-file cloudformation/template.yaml \
+#   --stack-name birdtag-image-lambda-stack \
+#   --parameter-overrides \
+#     LambdaImageUri=$IMAGE_URI \
+#     ExistingBucketName=birdtag-media-698342338581 \
+#   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+#   --no-fail-on-empty-changeset
+
 echo "Deployment complete with image tag: $TAG"
 
-  # --parameter-overrides LambdaImageUri="$(aws sts get-caller-identity --query Account --output text).dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-image-video:v20250606-1529" \
+  # --parameter-overrides LambdaImageUri="$(aws sts get-caller-identity --query Account --output text).dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-image-video:v20250607-1551" \
+
+# aws cloudformation deploy --template-file cloudformation/template.yaml --stack-name birdtag-image-lambda-stack --parameter-overrides LambdaImageUri="$(aws sts get-caller-identity --query Account --output text).dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-image-video:v20250607-1551" ExistingBucketName=birdtag-media-698342338581 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --no-fail-on-empty-changeset

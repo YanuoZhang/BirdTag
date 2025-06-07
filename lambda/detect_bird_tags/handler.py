@@ -33,11 +33,15 @@ def run_image_detection(image_path, save_path, bucket, user_id="demo_user", skip
         cv.imwrite(save_path, annotated_img)
 
         # === Generate thumbnail ===
+        original_img = cv.imread(image_path)  # Load again to ensure unannotated
+        if original_img is None:
+            raise ValueError("Failed to reload original image for thumbnail.")
+
         thumb_name = f"thumb_{os.path.basename(image_path)}"
         tmp_thumb_path = f"/tmp/{thumb_name}"
-        height, width = img.shape[:2]
+        height, width = original_img.shape[:2]
         scale = 256.0 / max(height, width)
-        resized = cv.resize(img, (int(width * scale), int(height * scale)))
+        resized = cv.resize(original_img, (int(width * scale), int(height * scale)))
         cv.imwrite(tmp_thumb_path, resized)
 
         # Prepare metadata
@@ -45,13 +49,16 @@ def run_image_detection(image_path, save_path, bucket, user_id="demo_user", skip
         tag_counts = dict(Counter(labels))
 
         metadata = {
-            "fileId": os.path.basename(image_path),
-            "type": "image",
+            "file_id": os.path.basename(image_path),
+            "filename": f"uploads/images/{user_id}/{os.path.basename(image_path)}",
+            "file_type": "image",
+            "s3Url": "",
+            "thumbnailUrl": "",
             "tags": tag_counts,
+            "tags_flat": list(tag_counts.keys()),
             "uploadTime": datetime.utcnow().isoformat() + "Z",
             "user_id": user_id,
-            "s3Url": "",
-            "thumbnailUrl": ""
+            "user_email": "demo@example.com"
         }
 
         if not skip_upload:  # Added: skip upload and database write if in temp query mode
@@ -90,13 +97,15 @@ def run_video_detection(video_path, save_path, bucket, user_id="demo_user", skip
         )
 
         metadata = {
-            "fileId": os.path.basename(video_path),
+            "file_id": os.path.basename(video_path),
+            "filename": f"uploads/videos/{user_id}/{os.path.basename(video_path)}",
             "type": "video",
+            "s3Url": "",
+            "thumbnailUrl": "",
             "tags": tag_counts,
             "uploadTime": datetime.utcnow().isoformat() + "Z",
             "user_id": user_id,
-            "s3Url": "",
-            "thumbnailUrl": ""
+            "user_email": "demo@example.com"
         }
 
         if not skip_upload:  # Added: skip upload and DB write in temp analysis

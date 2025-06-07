@@ -39,6 +39,21 @@ def handle_s3_trigger(event):
     key = record['s3']['object']['key']
     print(f"[INFO] Bucket: {bucket}, Key: {key}")
 
+    if key.startswith("annotated/") or key.startswith("thumbnails/"):
+        print(f"[INFO] Skipping system file upload trigger: {key}")
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"message": "Ignored system-generated file."})
+        }
+    
+    # if not key.startswith("uploads/media/"):
+    #     print(f"[INFO] Skipping non-media path: {key}")
+    #     return {
+    #         "statusCode": 200,
+    #         "body": json.dumps({"message": "Ignored non-media upload."})
+    #     }
+
+    # Prepare temporary paths
     filename = os.path.basename(key)
     tmp_input_path = f"/tmp/{uuid.uuid4()}_{filename}"
     tmp_output_path = f"/tmp/output_{filename}"
