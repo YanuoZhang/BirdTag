@@ -9,7 +9,7 @@ s3 = boto3.client("s3")
 
 
 table = dynamodb.Table(os.environ.get("TABLE_NAME", "BirdMedia"))
-BUCKET_NAME = os.environ.get("BUCKET_NAME", "birdtag-media-698342338581")
+BUCKET_NAME = os.environ.get("BUCKET_NAME", "birdtag-media-files-698342338581")
 
 
 def extract_key(s3_url):

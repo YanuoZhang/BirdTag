@@ -24,13 +24,13 @@ def lambda_handler(event, context):
         }
     
 if __name__ == "__main__":
-    test_event = {
-        "action": "search_by_tags",
-        "body": {
-        "tags": {
-            "crow": 1
-        }}
-    }
+    # test_event = {
+    #     "action": "search_by_tags",
+    #     "body": {
+    #     "tags": {
+    #         "crow": 1
+    #     }}
+    # }
 
 # 示例：测试 search_by_species
     # test_event = {
@@ -52,9 +52,9 @@ if __name__ == "__main__":
 
     # 示例：测试 delete_files
     # test_event = {
-    #     "action": "search_by_thumbnail",
+    #     "action": "delete_files",
     #      "body": {
-    #         "thumbnail_url": "https://s3.amazonaws.com/birdtag/thumbs/file101-thumb.jpg"
+    #         "file_ids": ["soundscape.wav"]
     #     }
     # }
 
