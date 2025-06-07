@@ -2,11 +2,47 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploy query Lambda function with container image
 
 Resources:
+  QueryLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: birdtag-query-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: birdtag-query-lambda-permissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                  - dynamodb:DeleteItem
+                  - dynamodb:UpdateItem
+                Resource: "*" 
+              - Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                Resource: arn:aws:s3:::birdtag-media-files-698342338581/*
+
   QueryLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: birdtag-query-lambda
-      Role: arn:aws:iam::698342338581:role/lambda-execution-role 
+      Role: !GetAtt QueryLambdaExecutionRole.Arn
       PackageType: Image
       Code:
         ImageUri: 698342338581.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-lambda:query-latest
@@ -14,3 +50,60 @@ Resources:
       Timeout: 30
       Architectures:
         - x86_64
+      Environment:
+        Variables:
+          TABLE_NAME: BirdMedia
+          BUCKET_NAME: birdtag-media-698342338581
+
+  QueryLambdaApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: birdtag-query-api
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - "POST"
+        AllowHeaders:
+          - "*"
+
+  QueryLambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref QueryLambdaApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt QueryLambdaFunction.Arn
+      PayloadFormatVersion: "2.0"
+      IntegrationMethod: POST
+
+  QueryLambdaRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref QueryLambdaApi
+      RouteKey: "POST /query"
+      Target: !Sub "integrations/${QueryLambdaIntegration}"
+
+  QueryLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref QueryLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${QueryLambdaApi}/*/*/query"
+
+  QueryLambdaStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      StageName: prod
+      ApiId: !Ref QueryLambdaApi
+      AutoDeploy: true
+
+Outputs:
+  QueryApiInvokeUrl:
+    Description: Invoke URL of the deployed API
+    Value: !Sub "https://${QueryLambdaApi}.execute-api.${AWS::Region}.amazonaws.com/prod/query"
+
+  LambdaFunctionArn:
+    Description: ARN of the deployed query Lambda
+    Value: !GetAtt QueryLambdaFunction.Arn
