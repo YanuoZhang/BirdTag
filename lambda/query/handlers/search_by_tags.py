@@ -30,7 +30,13 @@ def handle(event):
     }
     """
 
+    if isinstance(event.get("body"), str):
+        body = json.loads(event["body"])
+    else:
+        body = event.get("body", {})
+
     tag_filters = event.get("tags", {})
+    
     if not isinstance(tag_filters, dict) or not tag_filters:
         return {
             "statusCode": 400,
@@ -63,5 +69,5 @@ def handle(event):
         "statusCode": 200,
         "body": json.dumps({
             "results": matched_files
-        })
+        }, default = str)
     }

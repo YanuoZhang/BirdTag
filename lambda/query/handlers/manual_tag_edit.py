@@ -27,14 +27,14 @@ def handle(event):
     for file_id in file_ids:
         try:
             response = table.get_item(Key={"file_id": file_id})
-            item = response.get("Item", {"file_id": file_id, "tags": {}, "tag_flat": []})
+            item = response.get("Item", {"file_id": file_id, "tags": {}, "tag_flats": []})
             current_tags = item.get("tags", {})
-            tag_flat = set(item.get("tag_flat", []))
+            tags_flat = set(item.get("tags_flat", []))
 
             if op == 1:  # Add
                 for tag, count in tags.items():
                     current_tags[tag] = current_tags.get(tag, 0) + count
-                    tag_flat.add(tag)
+                    tags_flat.add(tag)
 
             else:  # Remove
                 for tag, count in tags.items():
@@ -42,10 +42,10 @@ def handle(event):
                         current_tags[tag] -= count
                         if current_tags[tag] <= 0:
                             current_tags.pop(tag)
-                            tag_flat.discard(tag)
+                            tags_flat.discard(tag)
 
             item["tags"] = current_tags
-            item["tag_flat"] = list(tag_flat)
+            item["tags_flat"] = list(tags_flat)
             table.put_item(Item=item)
             updated.append(file_id)
 
@@ -57,5 +57,5 @@ def handle(event):
         "body": json.dumps({
             "message": f"{'Added' if op == 1 else 'Removed'} tags for {len(updated)} files.",
             "updated": updated
-        })
+        }, default=str)
     }

@@ -1,5 +1,6 @@
 import boto3
 import os
+import json
 
 dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
 table = dynamodb.Table(os.environ.get("BIRDTAG_TABLE", "BirdMedia"))
@@ -17,7 +18,13 @@ def handle(event):
     }
     """
 
-    thumbnail_url = event.get("thumbnail_url")
+    if isinstance(event.get("body"), str):
+        body = json.loads(event["body"])
+    else:
+        body = event.get("body", {})
+
+    thumbnail_url = body.get("thumbnail_url")
+
     if not thumbnail_url:
         return {
             "statusCode": 400,

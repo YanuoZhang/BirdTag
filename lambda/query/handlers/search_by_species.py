@@ -1,5 +1,6 @@
 import boto3
 import os
+import json
 
 dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
 table = dynamodb.Table(os.environ.get("BIRDTAG_TABLE", "BirdMedia"))
@@ -13,7 +14,13 @@ def handle(event):
     Returns all files (image/audio/video) that contain at least one of these species (matched from tag_flat)
     """
 
-    species_list = event.get("species", [])
+    if isinstance(event.get("body"), str):
+        body = json.loads(event["body"])
+    else:
+        body = event.get("body", {})
+
+    species_list = body.get("species", [])
+    
     if not species_list:
         return {
             "statusCode": 400,
@@ -32,13 +39,13 @@ def handle(event):
     matched_files = []
 
     for item in items:
-        tag_flat = item.get("tag_flat", [])
-        if any(species in tag_flat for species in species_list):
+        tags_flat = item.get("tags_flat", [])
+        if any(species in tags_flat for species in species_list):
             matched_files.append(item)
 
     return {
         "statusCode": 200,
-        "body": {
+        "body": json.dumps({
             "results": matched_files
-        }
+        }, default=str)
     }

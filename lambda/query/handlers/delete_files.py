@@ -67,5 +67,5 @@ def handle(event):
         "body": json.dumps({
             "deleted": deleted,
             "not_found": not_found
-        })
+        }, default=str)
     }
