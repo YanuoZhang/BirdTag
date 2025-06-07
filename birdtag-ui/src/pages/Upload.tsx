@@ -51,7 +51,7 @@ const Upload = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": idToken || "",
+            "Authorization": `Bearer ${idToken}` || "",
           },
           body: JSON.stringify({
             filename: selectedFile.name,
@@ -61,15 +61,16 @@ const Upload = () => {
 
         if (!res.ok) throw new Error("Failed to get upload URL");
 
-        const { url, key } = await res.json(); 
-        console.log(url)
+        const { url, key, contentType } = await res.json(); 
+        console.log(""+url+"")
         console.log(selectedFile.type)
-        console.log(selectedFile)
+        console.log(key)
         const uploadRes = await fetch(url, {
           method: "PUT",
           headers: {
-            "Content-Type": selectedFile.type,
-            "Authorization": idToken || "",
+            "Content-Type": contentType,
+            "x-amz-acl": "bucket-owner-full-control",
+            "Authorization": `Bearer ${idToken}` || "",
           },
           body: selectedFile,
         });
