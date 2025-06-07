@@ -38,6 +38,10 @@ def lambda_handler(event, context):
         if content_type is None:
             content_type = 'application/octet-stream'
 
+        # Patch: unify wav type
+        if content_type == 'audio/x-wav':
+            content_type = 'audio/wav'
+
         # Check if the content type is supported
         if content_type not in ALLOWED_TYPES:
             raise ValueError(f"Unsupported content type: {content_type}")
@@ -54,20 +58,28 @@ def lambda_handler(event, context):
             ClientMethod='put_object',
             Params={
                 'Bucket': bucket,
-                'Key': key
+                'Key': key,
+                "ACL": "bucket-owner-full-control",
+                'ContentType': content_type
             },
             ExpiresIn=300
         )
 
         return {
             "statusCode": 200,
-            "headers": { "Content-Type": "application/json" },
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type",
+                "Access-Control-Allow-Methods": "POST,OPTIONS"
+            },
             "body": json.dumps({
                 "url": url,
                 "key": key,
                 "contentType": content_type
             })
         }
+
 
     except Exception as e:
         print("Error occurred:", str(e))
