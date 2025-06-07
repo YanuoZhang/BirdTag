@@ -59,7 +59,8 @@ def lambda_handler(event, context):
             Params={
                 'Bucket': bucket,
                 'Key': key,
-                "ACL": "bucket-owner-full-control"
+                "ACL": "bucket-owner-full-control",
+                'ContentType': content_type
             },
             ExpiresIn=300
         )
