@@ -23,7 +23,7 @@ def lambda_handler(event, context):
             "body": f"Unknown action: {action}"
         }
     
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # test_event = {
     #     "action": "search_by_tags",
     #     "body": {
@@ -58,5 +58,5 @@ if __name__ == "__main__":
     #     }
     # }
 
-    result = lambda_handler(test_event, None)
-    print(result)
+    # result = lambda_handler(test_event, None)
+    # print(result)
