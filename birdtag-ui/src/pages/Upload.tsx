@@ -69,8 +69,7 @@ const Upload = () => {
           method: "PUT",
           headers: {
             "Content-Type": contentType,
-            "x-amz-acl": "bucket-owner-full-control",
-            "Authorization": `Bearer ${idToken}` || "",
+            "x-amz-acl": "bucket-owner-full-control"
           },
           body: selectedFile,
         });
