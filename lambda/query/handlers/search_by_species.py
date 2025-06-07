@@ -10,7 +10,7 @@ def handle(event):
     {
         "species": ["crow", "parrot"]
     }
-    Returns all files (image/audio/video) that contain at least one of these species
+    Returns all files (image/audio/video) that contain at least one of these species (matched from tag_flat)
     """
 
     species_list = event.get("species", [])
@@ -32,16 +32,10 @@ def handle(event):
     matched_files = []
 
     for item in items:
-        tags = item.get("tags", {})
-        file_type = item.get("file_type", "")
-        if any(tag in tags for tag in species_list):
-            matched_files.append({
-                "file_id": item["file_id"],
-                "file_type": file_type,
-                "s3_url": item["s3_url"],
-                "thumbnail_url": item["thumbnail_url"],
-                "tags": tags
-            })
+        tag_flat = item.get("tag_flat", [])
+        if any(species in tag_flat for species in species_list):
+            matched_files.append(item)
+
     return {
         "statusCode": 200,
         "body": {
