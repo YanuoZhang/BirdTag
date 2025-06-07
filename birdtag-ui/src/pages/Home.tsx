@@ -11,11 +11,8 @@ const Home = () => {
     const token = localStorage.getItem("idToken");
     if (token) {
       setIsAuthenticated(true);
-    } else {
-      navigate("/login");
     }
   }, []);
-
 
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -242,31 +239,6 @@ const Home = () => {
             <h1 className="text-xl font-semibold text-gray-800">
               Bird Media Search
             </h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            {isAuthenticated ? (
-              <>
-                <div className="flex items-center">
-                  <span className="text-sm text-gray-600 mr-2">John Doe</span>
-                  <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white">
-                    <i className="fas fa-user text-xs"></i>
-                  </div>
-                </div>
-                <button
-                  className="text-sm text-gray-600 hover:text-gray-900 !rounded-button whitespace-nowrap cursor-pointer"
-                  onClick={() => setIsAuthenticated(false)}
-                >
-                  Log out
-                </button>
-              </>
-            ) : (
-              <button
-                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 !rounded-button whitespace-nowrap cursor-pointer"
-                onClick={() => setIsAuthenticated(true)}
-              >
-                Log in
-              </button>
-            )}
           </div>
         </div>
       </header>

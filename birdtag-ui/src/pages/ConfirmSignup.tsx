@@ -73,7 +73,7 @@ const ConfirmSignup = () => {
           Confirm Your Account
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          We’ve sent a code to <span className="font-medium">{email}</span>
+          We have sent a code to <span className="font-medium">{email}</span>
         </p>
       </div>
 
@@ -129,7 +129,7 @@ const ConfirmSignup = () => {
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-600">
-            Didn’t receive the code? <span className="text-blue-600">Check your spam folder</span> or{" "}
+            Didnt receive the code? <span className="text-blue-600">Check your spam folder</span> or{" "}
             <button className="underline text-blue-600">resend</button> (optional)
           </div>
         </div>

@@ -47,26 +47,23 @@ const Upload = () => {
 
         const formData = new FormData();
         formData.append("file", selectedFile);
+        // formData.append("action", "audio");
 
-        // try {
-        // const response = await fetch("/upload", {
-        //     method: "POST",
-        //     body: formData,
-        //     onUploadProgress: (progressEvent) => {
-        //     const progress = Math.round(
-        //         (progressEvent.loaded * 100) / progressEvent.total,
-        //     );
-        //     setUploadProgress(progress);
-        //     },
-        // });
+        try {
+          const response = await fetch("https://8yasbalx94.execute-api.ap-southeast-2.amazonaws.com/prod/analyze-audio", {
+            method: "POST",
+            body: formData,
+          });
 
-        // if (response.ok) {
-        //     const data = await response.json();
-        //     setTags(data.tags);
-        // }
-        // } catch (error) {
-        // console.error("Upload failed:", error);
-        // }
+          if (!response.ok) throw new Error("Upload failed");
+
+          const data = await response.json();
+          console.log("Detected tags:", data.tags);
+          setTags(data.tags || []);
+        } catch (error) {
+          console.error("Upload failed:", error);
+          alert("Failed to upload and analyze file.");
+        }
     };
 
     return (
@@ -94,7 +91,7 @@ const Upload = () => {
             type="file"
             className="hidden"
             onChange={handleFileChange}
-            accept="image/*"
+            accept="image/jpg,video/mp4,audio/wav"
           />
           <i className="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
           <p className="text-gray-600">
