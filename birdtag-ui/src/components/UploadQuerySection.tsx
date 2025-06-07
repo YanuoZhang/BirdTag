@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-const UploadQuerySection = () => {
+import React, { useState } from "react";
+
+const UploadQuerySection = ({ onResult }: { onResult: (results: any[]) => void }) => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [queryResults, setQueryResults] = useState<any[]>([]);
@@ -30,6 +31,15 @@ const UploadQuerySection = () => {
         const data = await response.json();
         if (response.ok) {
           setQueryResults(data.links || []);
+          const wrappedResults = data.links.map((url: string, index: number) => ({
+            id: Date.now() + index,         // 你系统需要 id
+            preview: url,
+            type: url.includes(".mp4") ? "video" : url.includes(".mp3") ? "audio" : "image",
+            species: [],                    // 上传查询可能没有 species，可为空数组
+            count: 1,
+            timestamp: new Date().toISOString(),
+          }));
+          onResult(wrappedResults);
         } else {
           setError(data.error || "Query failed");
         }
@@ -44,42 +54,48 @@ const UploadQuerySection = () => {
   };
 
   return (
-    <div className="bg-gray-50 p-4 rounded-md shadow-inner">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Upload a file (audio / image / video)
-      </label>
-      <input
-        type="file"
-        accept="audio/*,video/*,image/*"
-        onChange={handleFileChange}
-        className="mb-3"
-      />
-      <button
-        onClick={handleUploadAndQuery}
-        disabled={!file || isUploading}
-        className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700"
-      >
-        {isUploading ? "Analyzing..." : "Upload & Search"}
-      </button>
-
-      {error && <p className="text-red-600 mt-2 text-sm">{error}</p>}
-
-      {queryResults.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-sm font-semibold text-gray-800 mb-2">
-            Matching Files:
+    <div className="bg-gray-50 p-6 rounded-md shadow-inner border border-dashed border-gray-300">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-base font-semibold text-gray-800">
+            Upload a Media File
           </h3>
-          <ul className="list-disc pl-5 text-sm text-blue-600">
-            {queryResults.map((url, index) => (
-              <li key={index}>
-                <a href={url} target="_blank" rel="noreferrer">
-                  {url}
-                </a>
-              </li>
-            ))}
-          </ul>
+          <p className="text-sm text-gray-500">
+            Supported: image, audio, or video file
+          </p>
+        </div>
+
+        <label className="cursor-pointer inline-flex items-center text-sm font-medium text-blue-600 hover:underline">
+          <i className="fas fa-folder-open mr-2"></i>
+          <span>Select File</span>
+          <input
+            type="file"
+            accept="audio/*,video/*,image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+        </label>
+      </div>
+
+      {file && (
+        <div className="flex justify-between items-center border p-2 rounded bg-white text-sm mb-3">
+          <span className="text-gray-700">{file.name}</span>
+          <button
+            onClick={handleUploadAndQuery}
+            disabled={isUploading}
+            className={`px-4 py-1.5 text-sm rounded-md font-medium ${
+              isUploading
+                ? "bg-gray-300 text-gray-700 cursor-not-allowed"
+                : "bg-indigo-600 text-white hover:bg-indigo-700"
+            }`}
+          >
+            {isUploading ? "Analyzing..." : "Upload & Search"}
+          </button>
         </div>
       )}
+
+      {/* error message */}
+      {error && <p className="text-red-600 mt-2 text-sm">{error}</p>}
     </div>
   );
 };

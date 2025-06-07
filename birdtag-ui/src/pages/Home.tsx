@@ -121,33 +121,71 @@ const Home = () => {
   const [selectedUrls, setSelectedUrls] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [operation, setOperation] = useState<1 | 0>(1);
+const [enableCount, setEnableCount] = useState(false);
 
-  const handleSubmit = async () => {
-    const tags = tagInput
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
+  // For count-based mode
+  const [tagCounts, setTagCounts] = useState([{ tag: "", count: "" }]);
 
-    const body = {
-      url: selectedUrls,
-      operation,
-      tags,
-    };
+  // For tag-only mode
+  const [tagText, setTagText] = useState("");
 
-    const res = await fetch('/api/update-tags', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+  const handleAddRow = () => {
+    setTagCounts([...tagCounts, { tag: "", count: "" }]);
+  };
 
-    if (res.ok) {
-      alert('Tag operation succeeded');
-      setSelectedUrls([]);
-      setTagInput('');
+  const handleChange = (index: number, key: "tag" | "count", value: string) => {
+    const updated = [...tagCounts];
+    updated[index][key] = value;
+    setTagCounts(updated);
+  };
+
+  const handleRemove = (index: number) => {
+    setTagCounts(tagCounts.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = () => {
+    if (enableCount) {
+      const payload: Record<string, number> = {};
+      for (const { tag, count } of tagCounts) {
+        if (tag.trim()) {
+          payload[tag.trim()] = Math.max(parseInt(count || "1"), 1);
+        }
+      }
+      onSubmit({ action: "search_by_tags", tags: payload });
     } else {
-      alert('Failed to update tags');
+      const lines = tagText
+        .split("\n")
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+      onSubmit({ action: "search_by_tags", tags: lines });
     }
   };
+  // const handleSubmit = async () => {
+  //   const tags = tagInput
+  //     .split('\n')
+  //     .map((line) => line.trim())
+  //     .filter(Boolean);
+
+  //   const body = {
+  //     url: selectedUrls,
+  //     operation,
+  //     tags,
+  //   };
+
+  //   const res = await fetch('/api/update-tags', {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify(body),
+  //   });
+
+  //   if (res.ok) {
+  //     alert('Tag operation succeeded');
+  //     setSelectedUrls([]);
+  //     setTagInput('');
+  //   } else {
+  //     alert('Failed to update tags');
+  //   }
+  // };
   // Handle search
   const handleSearch = () => {
     setIsLoading(true);
@@ -191,15 +229,6 @@ const Home = () => {
     });
   };
 
-  // Handle species selection
-  const toggleSpecies = (species: string) => {
-    if (selectedSpecies.includes(species)) {
-      setSelectedSpecies(selectedSpecies.filter((item) => item !== species));
-    } else {
-      setSelectedSpecies([...selectedSpecies, species]);
-    }
-  };
-
   const handleDeleteFiles = async () => {
     const confirm = window.confirm("Are you sure you want to delete these files?");
     if (!confirm) return;
@@ -230,6 +259,12 @@ const Home = () => {
     }
   };
 
+  const handleUploadResult = (results: any[]) => {
+  setSearchResults(results);
+  setHasSearched(true);   // 控制结果展示区域出现
+  setViewMode("grid");    // 默认用 grid 显示上传结果
+};
+
   return (
      <div className="min-h-screen bg-gray-50">
       {/* Header & Authentication Section */}
@@ -246,199 +281,159 @@ const Home = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Search Parameters
-          </h2>
+         
+          <h2 className="text-lg font-medium text-gray-900">Search Parameters</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Bird Species Tags */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Bird Species Tags
-              </label>
-              <div className="relative">
-                <div className="flex flex-wrap gap-2 p-2 min-h-[42px] border border-gray-300 rounded-md focus-within:ring-1 focus-within:ring-indigo-500 focus-within:border-indigo-500">
-                  {selectedSpecies.map((species) => (
-                    <div
-                      key={species}
-                      className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full flex items-center"
+          <div className="space-y-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={enableCount}
+                onChange={() => setEnableCount(!enableCount)}
+              />
+              <span>Enable Minimum Count</span>
+            </label>
+
+            {enableCount ? (
+              <div className="space-y-2">
+                {tagCounts.map((row, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <input
+                      className="border p-2 rounded w-1/2"
+                      placeholder="Bird tag (e.g., crow)"
+                      value={row.tag}
+                      onChange={e => handleChange(index, "tag", e.target.value)}
+                    />
+                    <input
+                      className="border p-2 rounded w-1/4"
+                      type="number"
+                      placeholder="Count (default 1)"
+                      min={1}
+                      value={row.count}
+                      onChange={e => handleChange(index, "count", e.target.value)}
+                    />
+                    <button
+                      onClick={() => handleRemove(index)}
+                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
                     >
-                      <span>{species}</span>
-                      <button
-                        type="button"
-                        className="ml-1 text-indigo-600 hover:text-indigo-800 cursor-pointer"
-                        onClick={() => toggleSpecies(species)}
-                      >
-                        <i className="fas fa-times"></i>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <i className="fas fa-chevron-down text-gray-400"></i>
-                </div>
-              </div>
-
-              {/* Dropdown menu */}
-              <div className="mt-1 bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-y-auto">
-                {birdSpeciesList.map((species) => (
-                  <div
-                    key={species}
-                    className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-100 ${selectedSpecies.includes(species) ? "bg-indigo-50" : ""}`}
-                    onClick={() => toggleSpecies(species)}
-                  >
-                    <div className="flex items-center">
-                      <span className="flex-grow">{species}</span>
-                      {selectedSpecies.includes(species) && (
-                        <i className="fas fa-check text-indigo-600"></i>
-                      )}
-                    </div>
+                      Remove
+                    </button>
                   </div>
                 ))}
+                <button onClick={handleAddRow} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">
+                  + Add More
+                </button>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Select one or more bird species to filter results
-              </p>
-            </div>
-
-            {/* Minimum Bird Count */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Minimum Bird Count
-              </label>
-              <div className="relative mt-1 rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i className="fas fa-hashtag text-gray-400"></i>
-                </div>
-                <input
-                  type="number"
-                  min="1"
-                  value={minBirdCount}
-                  onChange={(e) =>
-                    setMinBirdCount(Math.max(1, parseInt(e.target.value) || 1))
-                  }
-                  className="block w-full pl-10 pr-12 py-2 sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="1"
-                />
-                <div className="absolute inset-y-0 right-0 flex">
-                  <div className="flex flex-col divide-y divide-gray-300 border-l border-gray-300">
-                    <button
-                      type="button"
-                      className="flex-1 px-2 bg-gray-50 hover:bg-gray-100 cursor-pointer !rounded-button whitespace-nowrap"
-                      onClick={() =>
-                        setMinBirdCount((prev) => Math.min(99, prev + 1))
-                      }
-                    >
-                      <i className="fas fa-chevron-up text-gray-500 text-xs"></i>
-                    </button>
-                    <button
-                      type="button"
-                      className="flex-1 px-2 bg-gray-50 hover:bg-gray-100 cursor-pointer !rounded-button whitespace-nowrap"
-                      onClick={() =>
-                        setMinBirdCount((prev) => Math.max(1, prev - 1))
-                      }
-                    >
-                      <i className="fas fa-chevron-down text-gray-500 text-xs"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Minimum number of birds detected (must be more than 1)
-              </p>
-            </div>
+            ) : (
+              <textarea
+                className="w-full border p-2 rounded red min-h-[150px]"
+                placeholder="Enter one tag per line..."
+                value={tagText}
+                onChange={e => setTagText(e.target.value)}
+              />
+            )}
           </div>
-
           {/* File Type Filter */}
-          <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              File Type (Optional)
-            </label>
-            <div className="flex space-x-4">
-              <div className="flex items-center">
-                <input
-                  id="all"
-                  name="fileType"
-                  type="radio"
-                  checked={fileType === "all"}
-                  onChange={() => setFileType("all")}
-                  className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                />
-                <label
-                  htmlFor="all"
-                  className="ml-2 block text-sm text-gray-700 cursor-pointer"
-                >
-                  All
-                </label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  id="image"
-                  name="fileType"
-                  type="radio"
-                  checked={fileType === "image"}
-                  onChange={() => setFileType("image")}
-                  className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                />
-                <label
-                  htmlFor="image"
-                  className="ml-2 block text-sm text-gray-700 cursor-pointer"
-                >
-                  <i className="fas fa-image mr-1 text-gray-500"></i> Images
-                </label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  id="audio"
-                  name="fileType"
-                  type="radio"
-                  checked={fileType === "audio"}
-                  onChange={() => setFileType("audio")}
-                  className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                />
-                <label
-                  htmlFor="audio"
-                  className="ml-2 block text-sm text-gray-700 cursor-pointer"
-                >
-                  <i className="fas fa-volume-up mr-1 text-gray-500"></i> Audio
-                </label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  id="video"
-                  name="fileType"
-                  type="radio"
-                  checked={fileType === "video"}
-                  onChange={() => setFileType("video")}
-                  className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                />
-                <label
-                  htmlFor="video"
-                  className="ml-2 block text-sm text-gray-700 cursor-pointer"
-                >
-                  <i className="fas fa-video mr-1 text-gray-500"></i> Videos
-                </label>
+          <div className="mb-4 flex justify-between items-center">
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                File Type (Optional)
+              </label>
+              <div className="flex space-x-4">
+                <div className="flex items-center">
+                  <input
+                    id="all"
+                    name="fileType"
+                    type="radio"
+                    checked={fileType === "all"}
+                    onChange={() => setFileType("all")}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                  />
+                  <label
+                    htmlFor="all"
+                    className="ml-2 block text-sm text-gray-700 cursor-pointer"
+                  >
+                    All
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    id="image"
+                    name="fileType"
+                    type="radio"
+                    checked={fileType === "image"}
+                    onChange={() => setFileType("image")}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                  />
+                  <label
+                    htmlFor="image"
+                    className="ml-2 block text-sm text-gray-700 cursor-pointer"
+                  >
+                    <i className="fas fa-image mr-1 text-gray-500"></i> Images
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    id="audio"
+                    name="fileType"
+                    type="radio"
+                    checked={fileType === "audio"}
+                    onChange={() => setFileType("audio")}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                  />
+                  <label
+                    htmlFor="audio"
+                    className="ml-2 block text-sm text-gray-700 cursor-pointer"
+                  >
+                    <i className="fas fa-volume-up mr-1 text-gray-500"></i> Audio
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    id="video"
+                    name="fileType"
+                    type="radio"
+                    checked={fileType === "video"}
+                    onChange={() => setFileType("video")}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                  />
+                  <label
+                    htmlFor="video"
+                    className="ml-2 block text-sm text-gray-700 cursor-pointer"
+                  >
+                    <i className="fas fa-video mr-1 text-gray-500"></i> Videos
+                  </label>
+                </div>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={handleSearch}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 !rounded-button whitespace-nowrap"
+            >
+              <i className="fas fa-search mr-1"></i>
+              Search
+            </button>
           </div>
+        </div>
+         
           {/* Upload Query Section */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
-              Or Upload a Media File to Search
-            </h2>
-            <UploadQuerySection />
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-medium text-gray-900">
+                Upload a Media File to Search
+              </h2>
+            </div>
+
+            <UploadQuerySection onResult={handleUploadResult}/>
           </div>
           {selectedUrls.length > 0 && (
-            <button
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-              onClick={handleDeleteFiles}
-            >
-              Delete Selected Files
-            </button>
-          )}
-          {selectedUrls.length > 0 && (
-            <div className="mt-6 border rounded p-4 bg-gray-50">
-              <h3 className="font-medium text-gray-800 mb-2">Bulk Tag Operation</h3>
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-medium text-gray-900">
+                  Bulk Tag Operation
+                </h2>
+              </div>
 
               <textarea
                 className="w-full border rounded p-2 text-sm"
@@ -470,20 +465,22 @@ const Home = () => {
               </div>
             </div>
           )}
-
-          {/* Search Button */}
-          <div className="mt-6 flex justify-center">
-            <button
-              type="button"
-              onClick={handleSearch}
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 !rounded-button whitespace-nowrap cursor-pointer"
-            >
-              <i className="fas fa-search mr-2"></i>
-              Search
-            </button>
-          </div>
-        </div>
-
+          {selectedUrls.length > 0 && (
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-medium text-gray-900">
+                  Delete Files
+                </h2>
+              </div>
+              
+                <button
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  onClick={handleDeleteFiles}
+                >
+                  Delete Selected Files
+                </button>
+            </div>
+          )}
         {/* Results Section */}
         {hasSearched && (
           <div className="bg-white rounded-lg shadow-md p-6">
