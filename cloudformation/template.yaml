@@ -42,6 +42,11 @@ Resources:
                   - Name: prefix
                     Value: uploads/audio/
             Function: !GetAtt BirdTagAudioLambda.Arn
+      PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          IgnorePublicAcls: true
+          BlockPublicPolicy: false
+          RestrictPublicBuckets: false
 
   ## Permission for S3 to invoke Audio Lambda
   S3InvokePermissionForAudio:
