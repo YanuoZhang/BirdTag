@@ -58,7 +58,8 @@ def lambda_handler(event, context):
             ClientMethod='put_object',
             Params={
                 'Bucket': bucket,
-                'Key': key
+                'Key': key,
+                "ACL": "bucket-owner-full-control"
             },
             ExpiresIn=300
         )
