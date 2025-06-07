@@ -215,9 +215,6 @@ Resources:
             Principal: "*"
             Action: "s3:PutObject"
             Resource: !Sub "${BirdTagMediaBucket.Arn}/uploads/*"
-            Condition:
-              StringEquals:
-                s3:x-amz-acl: "bucket-owner-full-control"
 
 Outputs:
   LambdaFunctionName:
