@@ -12,6 +12,7 @@
 | `file_id`        | String   | Unique ID (UUID) for each media file |
 | `user_id`        | String   | Uploader’s ID |
 | `user_email`     | String   | User's email |
+| `file_name`      | String   | file name |
 | `file_type`      | String   | Type of the file: "image", "video", or "audio" |
 | `upload_time`    | String   | ISO8601 timestamp of upload |
 | `s3_url`         | String   | Full S3 URL of the uploaded file |
