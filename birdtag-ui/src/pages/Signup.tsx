@@ -14,7 +14,6 @@ const Signup = () => {
   const [formValid, setFormValid] = useState(false);
 
   // Error messages
-  const [usernameError, setUsernameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [formError, setFormError] = useState("");
@@ -30,21 +29,6 @@ const Signup = () => {
   useEffect(() => {
     setFormValid(usernameValid && emailValid && passwordValid);
   }, [usernameValid, emailValid, passwordValid]);
-
-  // Username validation
-  const validateUsername = (value: string) => {
-    const usernameRegex = /^[a-zA-Z0-9]{3,20}$/;
-    if (!value) {
-      setUsernameError("Username is required");
-      setUsernameValid(false);
-    } else if (!usernameRegex.test(value)) {
-      setUsernameError("Username must be 3-20 alphanumeric characters");
-      setUsernameValid(false);
-    } else {
-      setUsernameError("");
-      setUsernameValid(true);
-    }
-  };
 
   // Email validation
   const validateEmail = (value: string) => {
@@ -188,45 +172,6 @@ const Signup = () => {
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-gray-700 text-left"
-              >
-                Username
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  autoComplete="username"
-                  required
-                  value={username}
-                  onChange={(e) => {
-                    setUsername(e.target.value);
-                    validateUsername(e.target.value);
-                  }}
-                  className={`appearance-none block w-full px-3 py-2 border ${
-                    usernameError ? "border-red-300" : "border-gray-300"
-                  } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                  placeholder="Choose a username (3-20 characters)"
-                />
-                {username && (
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                    {usernameValid ? (
-                      <i className="fas fa-check-circle text-green-500"></i>
-                    ) : (
-                      <i className="fas fa-times-circle text-red-500"></i>
-                    )}
-                  </div>
-                )}
-              </div>
-              {usernameError && (
-                <p className="mt-2 text-sm text-red-600">{usernameError}</p>
-              )}
-            </div>
-
             <div>
               <label
                 htmlFor="email"

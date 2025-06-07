@@ -1,7 +1,16 @@
 import { useState, useEffect } from "react";
 import UploadQuerySection from "../components/UploadQuerySection";
+import { useAuth } from 'react-oidc-context';
+import { useNavigate } from "react-router-dom";
 
 const Home = () => {
+  const navigate = useNavigate();
+  const auth = useAuth();
+  if (auth.isLoading) return <p>Loading...</p>;
+  if (auth.error) return <p>Error: {auth.error.message}</p>;
+  if (!auth.isAuthenticated) {
+    navigate("/login");
+  }
   // Authentication state (mock)
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
