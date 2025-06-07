@@ -54,10 +54,15 @@ def lambda_handler(event, context):
             ClientMethod='put_object',
             Params={
                 'Bucket': bucket,
-                'Key': key
+                'Key': key,
+                'ContentType': content_type
             },
             ExpiresIn=300
         )
+        print("Presigned Params:", {
+            "Key": key,
+            "ContentType": content_type
+        })
 
         return {
             "statusCode": 200,
