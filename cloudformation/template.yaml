@@ -18,6 +18,12 @@ Resources:
       AutoVerifiedAttributes:
         - email
 
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: BirdTagAppClient
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
 
   ## Audio Lambda Function
   BirdTagAudioLambda:
