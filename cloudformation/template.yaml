@@ -24,6 +24,15 @@ Resources:
       ClientName: BirdTagAppClient
       UserPoolId: !Ref UserPool
       GenerateSecret: false
+  
+  IdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: BirdTagIdentityPool
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ClientId: !Ref UserPoolClient
+          ProviderName: !GetAtt UserPool.ProviderName
 
   ## Audio Lambda Function
   BirdTagAudioLambda:
