@@ -69,7 +69,17 @@ Resources:
       IdentityPoolId: !Ref IdentityPool
       Roles:
         authenticated: !GetAtt CognitoCognitoAuthRole.Arn
-        
+
+  ApiCognitoAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: CognitoAuthorizer
+      IdentitySource: method.request.header.Authorization
+      RestApiId: !Ref BirdTagUploadApi
+      Type: COGNITO_USER_POOLS
+      ProviderARNs:
+        - !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}
+
   ## Audio Lambda Function
   BirdTagAudioLambda:
     Type: AWS::Lambda::Function
