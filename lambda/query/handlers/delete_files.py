@@ -1,70 +1,71 @@
 import boto3
 import os
+import json
 from urllib.parse import urlparse
+
 
 dynamodb = boto3.resource("dynamodb")
 s3 = boto3.client("s3")
 
+
 table = dynamodb.Table(os.environ.get("TABLE_NAME", "BirdMedia"))
-
-# def extract_bucket_and_key(s3_url):
-#     parsed = urlparse(s3_url)
-#     bucket = parsed.netloc.split(".s3")[0]
-#     key = parsed.path.lstrip("/")
-#     return bucket, key
-
-def extract_file_id(s3_url):
-    filename = os.path.basename(urlparse(s3_url).path)
-    file_id = os.path.splitext(filename)[0]
-    return file_id
+BUCKET_NAME = os.environ.get("BUCKET_NAME", "birdtag-media-698342338581")
 
 
+def extract_key(s3_url):
+    return urlparse(s3_url).path.lstrip('/')
 
 def handle(event):
-    urls = event.get("urls", [])
-    if not urls or not isinstance(urls, list):
+
+    if isinstance(event.get("body"), str):
+        body = json.loads(event["body"])
+    else:
+        body = event.get("body", {})
+
+    file_ids = body.get("file_ids", [])
+    if not file_ids or not isinstance(file_ids, list):
         return {
             "statusCode": 400,
-            "body": "Missing or invalid 'urls'"
+            "body": json.dumps({"error": "Missing or invalid 'file_ids'"})
         }
 
     deleted = []
     not_found = []
 
-    for url in urls:
-        file_id = extract_file_id(url)
-        response = table.get_item(Key={"file_id": file_id})
-        item = response.get("Item")
+    for file_id in file_ids:
+        try:
+            response = table.get_item(Key={"file_id": file_id})
+            item = response.get("Item")
 
-        if not item:
-            not_found.append(url)
-            continue
+            if not item:
+                not_found.append(file_id)
+                continue
 
-        file_type = item.get("file_type", "")
-        s3_url = item["s3_url"]
-        thumbnail_url = item.get("thumbnail_url", "")
+            file_type = item.get("file_type", "")
+            s3_url = item.get("s3_url", "")
+            thumbnail_url = item.get("thumbnail_url", "")
 
-        # Step 1: Delete main file (if exists in S3)
-        # bucket, key = extract_bucket_and_key(s3_url)
-        # s3.delete_object(Bucket=bucket, Key=key)
+ 
+            if s3_url:
+                key = extract_key(s3_url)
+                s3.delete_object(Bucket=BUCKET_NAME, Key=key)
 
-        # Step 2: Delete thumbnail (if image)
-        # if file_type == "image" and thumbnail_url:
-        #     tbucket, tkey = extract_bucket_and_key(thumbnail_url)
-        #     s3.delete_object(Bucket=tbucket, Key=tkey)
+ 
+            if file_type == "image" and thumbnail_url:
+                tkey = extract_key(thumbnail_url)
+                s3.delete_object(Bucket=BUCKET_NAME, Key=tkey)
 
-        if item["s3_url"] != url:
-            print(f"[Warning] URL mismatch for {file_id}: expected {item['s3_url']}, got {url}")
+            table.delete_item(Key={"file_id": file_id})
+            deleted.append(file_id)
 
-        # Step 3: Delete record
-        table.delete_item(Key={"file_id": file_id})
-        deleted.append(file_id)
+        except Exception as e:
+            print(f"[ERROR] Failed to delete {file_id}: {e}")
+            not_found.append(file_id)
 
     return {
         "statusCode": 200,
-        "body": {
+        "body": json.dumps({
             "deleted": deleted,
             "not_found": not_found
-        }
+        })
     }
-    

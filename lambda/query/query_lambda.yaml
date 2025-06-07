@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy query Lambda function with container image
+
+Resources:
+  QueryLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: birdtag-query-lambda
+      Role: arn:aws:iam::698342338581:role/lambda-execution-role 
+      PackageType: Image
+      Code:
+        ImageUri: 698342338581.dkr.ecr.ap-southeast-2.amazonaws.com/birdtag-lambda:query-latest
+      MemorySize: 1024
+      Timeout: 30
+      Architectures:
+        - x86_64
