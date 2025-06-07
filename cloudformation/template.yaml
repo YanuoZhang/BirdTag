@@ -328,6 +328,19 @@ Resources:
 
  
 Outputs:
+
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref UserPool
+
+  CognitoUserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref UserPoolClient
+
+  CognitoIdentityPoolId:
+    Description: Cognito Federated Identity Pool ID
+    Value: !Ref IdentityPool
+
   LambdaFunctionName:
     Description: Name of the created Lambda function
     Value: !Ref BirdTagAudioLambda
