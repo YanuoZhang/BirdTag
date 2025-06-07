@@ -24,12 +24,13 @@ def lambda_handler(event, context):
         }
     
 if __name__ == "__main__":
-    # test_event = {
-    #     "action": "search_by_tags",
-    #     "tags": {
-    #         "crow": 1
-    #     }
-    # }
+    test_event = {
+        "action": "search_by_tags",
+        "body": {
+        "tags": {
+            "crow": 1
+        }}
+    }
 
 # 示例：测试 search_by_species
     # test_event = {

@@ -35,8 +35,8 @@ def handle(event):
     else:
         body = event.get("body", {})
 
-    tag_filters = event.get("tags", {})
-    
+    tag_filters = body.get("tags", {})
+
     if not isinstance(tag_filters, dict) or not tag_filters:
         return {
             "statusCode": 400,
