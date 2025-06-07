@@ -61,13 +61,19 @@ def lambda_handler(event, context):
 
         return {
             "statusCode": 200,
-            "headers": { "Content-Type": "application/json" },
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type",
+                "Access-Control-Allow-Methods": "POST,OPTIONS"
+            },
             "body": json.dumps({
                 "url": url,
                 "key": key,
                 "contentType": content_type
             })
         }
+
 
     except Exception as e:
         print("Error occurred:", str(e))
