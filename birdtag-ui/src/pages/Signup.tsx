@@ -1,34 +1,32 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Signup = () => {
+  const region = "ap-southeast-2";
+  const clientId = "54j2queta9ns63t8t1au6846j8";
+  const COGNITO_ENDPOINT = `https://cognito-idp.${region}.amazonaws.com/`;
+  const HEADERS = {
+    "Content-Type": "application/x-amz-json-1.1",
+    "X-Amz-Target": "AWSCognitoIdentityProviderService.SignUp",
+  };
     // Form state
-  const [username, setUsername] = useState("");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   // Validation state
-  const [usernameValid, setUsernameValid] = useState(false);
+
   const [emailValid, setEmailValid] = useState(false);
-  const [passwordValid, setPasswordValid] = useState(false);
-  const [formValid, setFormValid] = useState(false);
+  // const [formValid, setFormValid] = useState(false);
 
   // Error messages
   const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
 
   // Loading state
   const [isLoading, setIsLoading] = useState(false);
-
-  // Password strength
-  const [passwordStrength, setPasswordStrength] = useState(0);
-
-  // Validate form fields
-  useEffect(() => {
-    setFormValid(usernameValid && emailValid && passwordValid);
-  }, [usernameValid, emailValid, passwordValid]);
 
   // Email validation
   const validateEmail = (value: string) => {
@@ -44,105 +42,42 @@ const Signup = () => {
       setEmailValid(true);
     }
   };
-
-  // Password validation and strength calculation
-  const validatePassword = (value: string) => {
-    // Password requirements: min 8 chars, upper/lower case, number, symbol
-    const lengthValid = value.length >= 8;
-    const uppercaseValid = /[A-Z]/.test(value);
-    const lowercaseValid = /[a-z]/.test(value);
-    const numberValid = /[0-9]/.test(value);
-    const symbolValid = /[^A-Za-z0-9]/.test(value);
-
-    // Calculate strength (0-4)
-    const strength =
-      [
-        lengthValid,
-        uppercaseValid,
-        lowercaseValid,
-        numberValid,
-        symbolValid,
-      ].filter(Boolean).length - 1;
-    setPasswordStrength(Math.max(0, strength));
-
-    if (!value) {
-      setPasswordError("Password is required");
-      setPasswordValid(false);
-    } else if (!lengthValid) {
-      setPasswordError("Password must be at least 8 characters");
-      setPasswordValid(false);
-    } else if (
-      !(uppercaseValid && lowercaseValid && numberValid && symbolValid)
-    ) {
-      setPasswordError(
-        "Password must include uppercase, lowercase, number, and symbol",
-      );
-      setPasswordValid(false);
-    } else {
-      setPasswordError("");
-      setPasswordValid(true);
-    }
-  };
+  const navigate = useNavigate();
 
   // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError("");
-    setFormSuccess("");
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setFormError("");
+  setFormSuccess("");
 
-    if (!formValid) return;
+  try {
+    const res = await fetch(COGNITO_ENDPOINT, {
+      method: "POST",
+      headers: HEADERS,
+      body: JSON.stringify({
+        ClientId: clientId,
+        Username: email,
+        Password: password,
+        UserAttributes: [{ Name: "email", Value: email }],
+      }),
+    });
 
-    setIsLoading(true);
-
-    // Simulate API call to Cognito
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Simulate successful registration
-      // In a real app, you would call Cognito here:
-      // await Auth.signUp({
-      //   username: email,
-      //   password,
-      //   attributes: {
-      //     email,
-      //     preferred_username: username,
-      //   }
-      // });
-
-      setFormSuccess(
-        "Sign-up successful! Please check your email for a verification code.",
-      );
-
-      // Reset form after successful submission
-      setUsername("");
-      setEmail("");
-      setPassword("");
-      setPasswordStrength(0);
-
-      // Redirect to verification page after a delay
-      setTimeout(() => {
-        // In a real app, you would use router navigation here
-        console.log("Redirecting to verification page...");
-      }, 2000);
-    } catch (error) {
-      // Simulate different error scenarios
-      const randomError = Math.floor(Math.random() * 3);
-
-      if (randomError === 0) {
-        setFormError("An account with this email already exists.");
-      } else if (randomError === 1) {
-        setFormError("This username is already in use.");
-      } else {
-        setFormError(
-          "An error occurred during registration. Please try again.",
-        );
-      }
-    } finally {
-      setIsLoading(false);
+    const data = await res.json();
+    if (res.ok) {
+      setFormSuccess("Sign-up successful! Please check your email.");
+      navigate(`/confirm?email=${encodeURIComponent(email)}`);
+    } else {
+      setFormError(data.message || "Sign-up failed.");
     }
-  };
+  } catch (err) {
+    setFormError("Something went wrong. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};  
  return (
-<div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center">
@@ -228,11 +163,9 @@ const Signup = () => {
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
-                    validatePassword(e.target.value);
                   }}
-                  className={`appearance-none block w-full px-3 py-2 border ${
-                    passwordError ? "border-red-300" : "border-gray-300"
-                  } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300
+                  rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Min 8 characters with uppercase, lowercase, number, symbol"
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -247,75 +180,14 @@ const Signup = () => {
                   </button>
                 </div>
               </div>
-              {passwordError && (
-                <p className="mt-2 text-sm text-red-600">{passwordError}</p>
-              )}
-
-              {/* Password strength indicator */}
-              {password && (
-                <div className="mt-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs text-gray-500">Password strength:</p>
-                    <p className="text-xs font-medium">
-                      {passwordStrength === 0 && "Very weak"}
-                      {passwordStrength === 1 && "Weak"}
-                      {passwordStrength === 2 && "Medium"}
-                      {passwordStrength === 3 && "Strong"}
-                      {passwordStrength === 4 && "Very strong"}
-                    </p>
-                  </div>
-                  <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${
-                        passwordStrength === 0
-                          ? "bg-red-500"
-                          : passwordStrength === 1
-                            ? "bg-orange-500"
-                            : passwordStrength === 2
-                              ? "bg-yellow-500"
-                              : passwordStrength === 3
-                                ? "bg-green-500"
-                                : "bg-green-600"
-                      }`}
-                      style={{ width: `${(passwordStrength + 1) * 20}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center">
-              <input
-                id="terms"
-                name="terms"
-                type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                required
-              />
-              <label
-                htmlFor="terms"
-                className="ml-2 block text-sm text-gray-900"
-              >
-                I agree to the{" "}
-                <a href="#" className="text-blue-600 hover:text-blue-500">
-                  Terms of Service
-                </a>{" "}
-                and{" "}
-                <a href="#" className="text-blue-600 hover:text-blue-500">
-                  Privacy Policy
-                </a>
-              </label>
+              
             </div>
 
             <div>
               <button
                 type="submit"
-                disabled={!formValid || isLoading}
-                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 !rounded-button whitespace-nowrap ${
-                  !formValid || isLoading
-                    ? "opacity-50 cursor-not-allowed"
-                    : "cursor-pointer"
-                }`}
+                onClick={handleSubmit}
+                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 !rounded-button whitespace-nowrap `}
               >
                 {isLoading ? (
                   <>
@@ -343,7 +215,7 @@ const Signup = () => {
 
             <div className="mt-6">
               <a
-                href="#"
+                href="/login"
                 className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 !rounded-button whitespace-nowrap cursor-pointer"
               >
                 Sign In

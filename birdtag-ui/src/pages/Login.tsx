@@ -36,7 +36,7 @@ const Login = () => {
         localStorage.setItem("accessToken", data.AuthenticationResult.AccessToken);
         localStorage.setItem("refreshToken", data.AuthenticationResult.RefreshToken);
         alert("Login successful!");
-        navigate("/home"); 
+        navigate("/"); 
       } else {
         console.error("Login failed:", data);
         alert("Login failed: " + (data.message || data.__type || "Unknown error"));

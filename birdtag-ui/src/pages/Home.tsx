@@ -1,18 +1,22 @@
 import { useState, useEffect } from "react";
 import UploadQuerySection from "../components/UploadQuerySection";
-import { useAuth } from 'react-oidc-context';
 import { useNavigate } from "react-router-dom";
 
 const Home = () => {
   const navigate = useNavigate();
-  const auth = useAuth();
-  if (auth.isLoading) return <p>Loading...</p>;
-  if (auth.error) return <p>Error: {auth.error.message}</p>;
-  if (!auth.isAuthenticated) {
-    navigate("/login");
-  }
   // Authentication state (mock)
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Redirect if not authenticated
+  useEffect(() => {
+    const token = localStorage.getItem("idToken");
+    if (token) {
+      setIsAuthenticated(true);
+    } else {
+      navigate("/login");
+    }
+  }, []);
+
+
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
@@ -228,14 +232,6 @@ const Home = () => {
       alert("Error deleting files.");
     }
   };
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      // Redirect to login page in a real application
-      console.log("User not authenticated, should redirect to login");
-    }
-  }, [isAuthenticated]);
 
   return (
      <div className="min-h-screen bg-gray-50">
