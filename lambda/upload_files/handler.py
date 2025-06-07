@@ -38,6 +38,10 @@ def lambda_handler(event, context):
         if content_type is None:
             content_type = 'application/octet-stream'
 
+        # Patch: unify wav type
+        if content_type == 'audio/x-wav':
+            content_type = 'audio/wav'
+
         # Check if the content type is supported
         if content_type not in ALLOWED_TYPES:
             raise ValueError(f"Unsupported content type: {content_type}")
