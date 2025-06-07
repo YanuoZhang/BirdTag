@@ -17,6 +17,13 @@ Resources:
       UserPoolName: BirdTagUserPool
       AutoVerifiedAttributes:
         - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
 
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
@@ -24,6 +31,10 @@ Resources:
       ClientName: BirdTagAppClient
       UserPoolId: !Ref UserPool
       GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
   
   IdentityPool:
     Type: AWS::Cognito::IdentityPool
