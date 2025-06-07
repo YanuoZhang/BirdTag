@@ -22,7 +22,7 @@ Resources:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       ClientName: MyAppClient
-      UserPoolId: !Ref MyUserPool
+      UserPoolId: !Ref UserPool
       GenerateSecret: false
       ExplicitAuthFlows:
         - ALLOW_USER_PASSWORD_AUTH
